@@ -158,7 +158,7 @@ def intersect_partitions(partitions: Iterable[np.array]) -> np.array:
 
     Examples
     --------
-    >>> intersect_partitions([np.array([1,X,X]),np.array([2,2,6])])
+    >>> intersect_partitions([np.array([1,4,5]),np.array([2,2,6])])
     array([1, 1, 2, 1, 5])
     """
     result = np.diff(

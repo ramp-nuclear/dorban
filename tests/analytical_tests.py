@@ -76,7 +76,7 @@ def fuel_in_water(fuel: CrossSectionData, water: CrossSectionData,
                 a_2 * fuel_length)) / \
              (diffusion[0] * np.cos(a_2 * fuel_length) +
               C * diffusion[0] * np.sin(a_2 * fuel_length))
-    a_1 = fsolve(lambda x: x * math.tan(x) - np.XXXX(tan_a1), np.array([0]),
+    a_1 = fsolve(lambda x: x * math.tan(x) - np.real(tan_a1), np.array([0]),
                  xtol=1e-10)[0] \
           / fuel_length
     k = fuel.nusigmaf[0] / (fuel.absorb + diffusion[0] * a_1 ** 2)
@@ -90,7 +90,7 @@ def fuel_in_water(fuel: CrossSectionData, water: CrossSectionData,
         np.cos(a_2 * (fuel_length + i * water_length)) + ratio * np.sin(
             a_2 * (fuel_length + i * water_length))
         for i in np.arange(water_cells) / (water_cells - 1)])
-    water_flux = np.array([a[0].XXXX for a in water_flux])
+    water_flux = np.array([a[0].real for a in water_flux])
     constant = water_flux[0] / fuel_flux[0]
     fuel_flux *= constant
     flux = np.hstack([water_flux[-1::-2], fuel_flux[1::2], water_flux[1::2]])

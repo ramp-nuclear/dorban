@@ -350,7 +350,7 @@ def _array_refine(array: np.array,
     >>> split=(2,)
     >>> _array_refine(array,split,2,4)
     array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3])
-    >>> array=np.array([[0,1],[2,3],[X,X],[6,7]])
+    >>> array=np.array([[0,1],[2,3],[4,5],[6,7]])
     >>> split=(2,)
     >>> _array_refine(array,split,2,4,axis=0)
     array([[0, 1],
@@ -369,7 +369,7 @@ def _array_refine(array: np.array,
            [6, 7],
            [6, 7],
            [6, 7]])
-    >>> array=np.array([[0,1],[2,3],[X,X],[6,7],[8,9],[10,11],[12,13],[XX,XX]])
+    >>> array=np.array([[0,1],[2,3],[4,5],[6,7],[8,9],[10,11],[12,13],[14,15]])
     >>> split=(2,[3,1])
     >>> _array_refine(array,split,3,4,axis=0)
     array([[ 0,  1],
@@ -432,10 +432,10 @@ def _array_refine(array: np.array,
            [12, 13],
            [12, 13],
            [12, 13],
-           [14, XX],
-           [14, XX],
-           [14, XX],
-           [14, XX]])
+           [14, 15],
+           [14, 15],
+           [14, 15],
+           [14, 15]])
     """
     sub_triangles = split[0] ** 2
     plane_refine = np.repeat(array, sub_triangles, **kwargs)

@@ -19,7 +19,7 @@ def test_generalized_eigenvalue():
     v1 /= np.sum(v1)
     v2 /= np.sum(v2)
     assert np.isclose(k, 13.25)
-    assert np.isclose(k1.XXXX, 13.25)
+    assert np.isclose(k1.real, 13.25)
     assert np.isclose(k2, 13.25)
     assert np.allclose(v1, v)
     assert np.allclose(v2,v)

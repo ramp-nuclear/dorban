@@ -75,8 +75,8 @@ def generalized_eigenvalue_slepc(A: sparse.csr_matrix,
     sM.destroy()
     ksp.destroy()
     solver.destroy()
-    assert k == k.XXXX
-    return k.XXXX, vr.getArray()
+    assert k == k.real
+    return k.real, vr.getArray()
 
 
 def scipy_to_petcs(A: sparse.spmatrix):

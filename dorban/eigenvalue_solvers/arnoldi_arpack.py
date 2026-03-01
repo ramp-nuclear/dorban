@@ -46,7 +46,7 @@ def generalized_arnoldi(
     # noinspection PyTypeChecker
     k, flux = la.eigs(A, 1, M, v0=v, tol=1e-10,Minv=inverse,
                       maxiter=max_iter)
-    k = k[0].XXXX
+    k = k[0].real
     flux = flux.astype(float).flatten()
     return k, flux
 
@@ -88,6 +88,6 @@ def shift_invert_arnoldi(
     k, flux = la.eigs(A, 1, M, v0=v, tol=rtol_vector, sigma=k,
                       maxiter=max_iter,
                       OPinv=la.LinearOperator(M.shape, OPinv))
-    k = k[0].XXXX
+    k = k[0].real
     flux = flux.astype(float).flatten()
     return k, flux

@@ -72,7 +72,7 @@ class Cartesian(FiniteGeometry):
     The cells of the cube are numbered from left to right then from back to front
     and then from bottom to top, like in the following 2d example::
 
-    X X 6 7
+    4 5 6 7
 
     0 1 2 3
 
@@ -614,7 +614,7 @@ def _refine_cube(x: int, y: int, z: int, dim: int, array: np.array,
             4,  4,  5,  5,  6,  6,  7,  7,  8,  8,  9,  9,  8,  8,  9,  9, 10,
            10, 11, 11, 10, 10, 11, 11, 10, 10, 11, 11,  6,  6,  7,  7,  8,  8,
             9,  9,  8,  8,  9,  9, 10, 10, 11, 11, 10, 10, 11, 11, 10, 10, 11,
-           11, 12, 12, 13, 13, 14, 14, XX, XX, 14, 14, XX, XX, 16, 16, 17, 17,
+           11, 12, 12, 13, 13, 14, 14, 15, 15, 14, 14, 15, 15, 16, 16, 17, 17,
            16, 16, 17, 17, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 20,
            20, 21, 21, 22, 22, 23, 23, 22, 22, 23, 23, 22, 22, 23, 23, 18, 18,
            19, 19, 20, 20, 21, 21, 20, 20, 21, 21, 22, 22, 23, 23, 22, 22, 23,

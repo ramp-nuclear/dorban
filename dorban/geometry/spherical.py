@@ -1,7 +1,7 @@
 """
 Contains the Spherical Geometry class, which can be used to model spherical
 system for example the Godiva and Jezebel experiments. This geometry can't be
-used to model a XXXX reactor but can be used for toy models.
+used to model a real reactor but can be used for toy models.
 """
 from typing import List, Sequence
 
