@@ -328,7 +328,7 @@ class Cartesian(FiniteGeometry):
          the number of the cell
         """
         lengths = self._lengths_cell(cell)
-        return np.product(lengths)
+        return np.prod(lengths)
 
     def surface_area(self, cell: int, face: int) -> float:
         """
@@ -625,6 +625,6 @@ def _refine_cube(x: int, y: int, z: int, dim: int, array: np.array,
         [x, y, z][:dim] + list(array.shape)[1:]), order="F")
     for i in range(dim):
         cube = np.repeat(cube, split[i], axis=i)
-    reshaped = np.reshape(cube, tuple([np.product(
+    reshaped = np.reshape(cube, tuple([np.prod(
         [np.sum(s) for s in split])] + list(array.shape)[1:]), order="F")
     return reshaped

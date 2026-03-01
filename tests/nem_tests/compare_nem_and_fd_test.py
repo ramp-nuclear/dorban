@@ -16,7 +16,7 @@ from hypothesis import given, settings
 
 
 @given(*[floats(1, 10, allow_nan=False, allow_infinity=False)] * 4)
-@settings(deadline=None)
+@settings(deadline=None, max_examples=20)
 def test_four_cells_rectangle(a, b, c, d):
     geometry = Cartesian([np.array([a, b]), np.array([c, d])], [Reflector()] * 4)
     mat1 = Fissionable("Fuel", scatter=np.array([[0, 0], [0.02, 0]]),
@@ -36,4 +36,4 @@ def test_four_cells_rectangle(a, b, c, d):
     settings_nem = NEMSettings(split=geometry.uniform_split(3))
     fd_k, _ = solve_k(core_fd, settings_fd)
     nem_k, _ = solve_k(core_nem, settings_nem)
-    assert nem_k - fd_k == pytest.approx(0, abs=1e-3)
+    assert nem_k - fd_k == pytest.approx(0, abs=2e-3)

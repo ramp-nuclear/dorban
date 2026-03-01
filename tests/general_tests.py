@@ -24,7 +24,7 @@ def test_flux_with_given_boundary_current(CAR_2dim):
                 current = mat @ flux
                 current = current[np.nonzero(current)]
                 geo.neighbors[cell][face] = KnownCurrent(current/system.geometry.surface_area(cell,face))
-    flux2 = flux_with_given_boundary_current(system, k,tol=1e-10,atol=1e-10)
+    flux2 = flux_with_given_boundary_current(system, k,rtol=1e-10,atol=1e-10)
     flux=flux / np.sum(flux)
     flux2=flux2 / np.sum(flux2)
     assert np.all(np.abs((flux-flux2)/flux)<1e-5)

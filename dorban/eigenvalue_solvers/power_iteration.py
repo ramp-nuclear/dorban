@@ -3,7 +3,7 @@ This module contains an implementation of the power iteration algorithms for the
 solution of the generalized eigenvaluelue problem :math:`Av=kMv`.
 """
 
-from typing import Generator, Optional, Tuple, Union
+from typing import Generator, Optional, Union
 
 import numpy as np
 import scipy.sparse as sparse
@@ -16,7 +16,7 @@ def generalized_eigenvalue(
         M: Union[sparse.spmatrix, np.array, la.LinearOperator],
         k: float = 1,
         v: Optional[np.array] = None,
-        **kwargs) -> Tuple[float, np.array]:
+        **kwargs) -> tuple[float, np.array]:
     r"""
     solves the generalized eigenvalue problem :math:`Av=kMv`.
     Finds the largest eigenvalue satisfying :math:`Av=kMv` and its eigenvector
@@ -36,7 +36,7 @@ def generalized_eigenvalue(
 
     Returns
     -------
-    Tuple[float, np.array]
+    tuple[float, np.array]
      tuple whose first value is the eigenvalue and whose second value is the
      eigenvector
     """
@@ -52,7 +52,7 @@ def source_iteration_generator(
         rtol_vector: float = 1e-4, atol_vector: float = 1e-5,
         lin_rtol: float = 1e-8, lin_atol: float = 1e-8,
         max_iter: Optional[int] = None
-        ) -> Generator[Tuple[float, np.array], None, None]:
+        ) -> Generator[tuple[float, np.array], None, None]:
     r"""
     Generator that yields iterations for the generalized eigenvalue problem
     :math:`Av=kMv`.
@@ -96,7 +96,7 @@ def source_iteration_generator(
               )):
         k0, v = k, u
         u = la.lgmres(M, A @ v, v * k0,
-                      atol=lin_atol, tol=lin_rtol)[0]
+                      atol=lin_atol, rtol=lin_rtol)[0]
         k = np.linalg.norm(A @ u)
         u /= k
         iterations += 1

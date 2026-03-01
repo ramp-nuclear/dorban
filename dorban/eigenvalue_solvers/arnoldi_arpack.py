@@ -39,7 +39,7 @@ def generalized_arnoldi(
     max_iter = None if max_iter == np.inf else max_iter
 
     def Minv(vec: np.array):
-        return la.lgmres(M, vec, atol=lin_atol, tol=lin_rtol)[0]
+        return la.lgmres(M, vec, atol=lin_atol, rtol=lin_rtol)[0]
 
     inverse = la.LinearOperator(M.shape, Minv)
 
@@ -82,7 +82,7 @@ def shift_invert_arnoldi(
     max_iter = None if max_iter == np.inf else max_iter
 
     def OPinv(vec: np.array):
-        return la.lgmres(A - k * M, vec, atol=lin_atol, tol=lin_rtol)[0]
+        return la.lgmres(A - k * M, vec, atol=lin_atol, rtol=lin_rtol)[0]
 
     # noinspection PyTypeChecker
     k, flux = la.eigs(A, 1, M, v0=v, tol=rtol_vector, sigma=k,

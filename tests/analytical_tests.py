@@ -65,7 +65,7 @@ def fuel_in_water(fuel: CrossSectionData, water: CrossSectionData,
     fuel_cells *= 2
     water_cells *= 2
     water_laplace_coefficient = -water.absorb[0] / diffusion[1]
-    a_2 = sp.sqrt(water_laplace_coefficient)[0]
+    a_2 = np.sqrt(water_laplace_coefficient)[0]
     length = fuel_length + water_length
     C = (np.cos(a_2 * length) + 2 * diffusion[1] * a_2 * np.sin(
         a_2 * length)) / \

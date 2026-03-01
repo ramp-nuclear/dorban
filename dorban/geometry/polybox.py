@@ -41,7 +41,7 @@ class PolyBox(FiniteGeometry):
         self.lengths = lengths
         self.neighbors = neighbors
         self.cells = len(neighbors)
-        self.volumes = np.product(self.lengths, axis=1)
+        self.volumes = np.prod(self.lengths, axis=1)
 
     def surface_area(self, cell: int, face: int) -> float:
         """
@@ -129,7 +129,7 @@ class PolyBox(FiniteGeometry):
          new array containing the same information but is suitable to the
          refined geometry
         """
-        return np.repeat(array, [np.product(splitting) for splitting in split],
+        return np.repeat(array, [np.prod(splitting) for splitting in split],
                          **kwargs)
 
     def single_cell(self, cell, boundary_conditions):
@@ -203,7 +203,7 @@ class PolyBox(FiniteGeometry):
          The neighbors for the refined system
         """
 
-        cells_per_cell = np.array([np.product(splitting) for splitting in split])
+        cells_per_cell = np.array([np.prod(splitting) for splitting in split])
         cells = np.sum(cells_per_cell)
         refined_neighbors = list(range(int(cells)))
         up_to_cells = np.hstack([[0], np.cumsum(cells_per_cell)[:-1]])
@@ -276,7 +276,7 @@ class Box:
                              "Instead there were"
                              f"{[sizes_of_neighbors, boundary_conditions].count(None)}")
         self.dim = len(sizes)
-        self.cells = np.product(sizes)
+        self.cells = np.prod(sizes)
         self.sizes = sizes
         self.sizes_of_neighbors = sizes_of_neighbors
         self.boundary_conditions = boundary_conditions

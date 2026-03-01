@@ -78,7 +78,7 @@ class GeneratorEigenvalue():
             la.bicgstab(self.M - 1 / k_old * self.A, self.A @ self.v,
                         self.v * self.k,
                         atol=self.lin_atol,
-                        tol=self.lin_rtol)
+                        rtol=self.lin_rtol)
         assert info == 0
         k_new = np.linalg.norm(u)
         u = u / k_new

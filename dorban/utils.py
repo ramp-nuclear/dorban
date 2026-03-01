@@ -1,5 +1,5 @@
 from bisect import bisect_left
-from typing import Any, Iterable, List, Optional, Sequence, Set, Union
+from typing import Any, Iterable, Optional, Sequence, Union
 
 import numpy as np
 from numba import numba
@@ -98,7 +98,7 @@ def vertex_in_neighbor(vertex: int, face: int) -> int:
 
 def triangles_with_vertex(cell: int, vertex: int,
                           neighbors: Sequence[Sequence[int]],
-                          found: Optional[Set[int]] = None) -> set:
+                          found: Optional[set[int]] = None) -> set:
     r"""
     Finds all the triangles that have a common vertex with the given
     triangle not contained in a given face. The correspondece between vertices
@@ -112,13 +112,13 @@ def triangles_with_vertex(cell: int, vertex: int,
      The index of the face. The faces are numbered according to:  / , \ ,_
     neighbors: Sequence[Sequence[int]]
      The sequence of neighbors for each cell of the system
-    found: Set[int]
+    found: set[int]
      The triangles which are neighbors of the cell that were already
      found. It is used becasue the function calls itself recursivly
 
     Returns
     -------
-    Set[int]
+    set[int]
         The set of the numbers of the triangles that contain the vertex
 
     Examples
@@ -136,7 +136,7 @@ def triangles_with_vertex(cell: int, vertex: int,
     other = np.array([i for i in range(3) if i != vertex])
     dis1 = np.array(neighbors[cell])[other]
     non_boundary_condition = [not isinstance(tri, Boundary) for tri in dis1]
-    dis1 = dis1[non_boundary_condition]
+    dis1 = set((v if isinstance(v, int) else v.item() for v in dis1[non_boundary_condition]))
     other = other[non_boundary_condition]
     founded_before = found.copy()
     for triangle, face in zip(dis1, other):
@@ -181,7 +181,7 @@ def mink_sum(a: Sequence, b: Sequence) -> np.array:
     return np.array(np.add.outer(a, b).flatten(), dtype=int)
 
 
-def insert_black_absorber(cell: Union[int, Boundary], black: List[int],
+def insert_black_absorber(cell: Union[int, Boundary], black: list[int],
                           condition: Boundary = None) -> Union[int, Boundary]:
     """
     This function gets a cell and a list of the numbers of
@@ -195,7 +195,7 @@ def insert_black_absorber(cell: Union[int, Boundary], black: List[int],
     ----------
     cell: Union[int, Boundary]
      Either a number of a cell or a Boundary condition.
-    black: List[int]:
+    black: list[int]:
      the list of numbers of cells to ignore
     condition: Boundary
      the boundary condition which the cells near the cells that we
