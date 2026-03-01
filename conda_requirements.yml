@@ -1,0 +1,10 @@
+dependencies:
+  - numpy
+  - scipy
+  - slepc4py
+  - petsc4py
+  - matplotlib
+  - numba
+  - multipledispatch
+  - more-itertools
+

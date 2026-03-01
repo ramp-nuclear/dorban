@@ -1,0 +1,40 @@
+This file will contain a list of benchmarks and their status- not implemented/implemented/passed
+
+Argonne code center:benchmark problem book- benchmark number 2/High temp Gas-cooled reactor problem -
+            not implemented
+
+Argonne code center:benchmark problem book- benchmark number 3/Two dimensional diffusion problem -
+            not implemented
+
+Argonne code center:benchmark problem book- benchmark number 4/Diffusion Theory for a Highly Nonseparable reactor -
+            not implemented
+
+Argonne code center:benchmark problem book- benchmark number 6/Infinite slab reactor model -
+            passed
+
+Argonne code center:benchmark problem book- benchmark number 8/Two dimensional (R-Z) reactor model -
+            not implemented, unsupported geometry
+
+Argonne code center:benchmark problem book- benchmark number 9/Two dimensional Hexagonal geometry  -
+            passed, difference of 20 pcm
+
+Argonne code center:benchmark problem book- benchmark number 11/3 dimensional LWR model  -
+            passed, difference of about 10 pcm
+
+Argonne code center:benchmark problem book- benchmark number 11-2/2 dimensional version of the previous benchmark  -
+            not implemented
+
+Argonne code center:benchmark problem book- benchmark number 13/neutron Transport in a BWR Rod Bundle  -
+            passed
+
+Argonne code center:benchmark problem book- benchmark number 14/Super Prompt-critical Transient -
+            implemented, kinetic solver is too slow for debug
+
+Argonne code center:benchmark problem book- benchmark number 17/Two Dimensional Kinetics Problem in a Heavy Water Reactor -
+            not implemented
+
+Argonne code center:benchmark problem book- benchmark number 18/Three-dimensional Model of a LMFBR in Triangular-z-Geometry -
+            not implemented, It has a lot of different version, 2 dimensional hexagonal, 2 dimensional cartesian
+
+Argonne code center:benchmark problem book- benchmark number 19/Two-Dimensional PWR Burnup Problem -
+            not implemented

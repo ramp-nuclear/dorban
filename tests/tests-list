@@ -1,0 +1,34 @@
+The tests can be divided into 2 categories:
+    1. unit-tests
+    2. benchmarks
+
+Category 1-unit tests:
+    petsc-slepc:
+        1. test that checks the transformation of a scipy matrix to a petsc matrix
+        2. test that checks the slpec based eigen-solver
+    drawing:
+        3. test that checks that the function that draws a triangle runs
+        4. test that checks that the function that draws a rectangle runs
+    cross section operators:
+        5. test that checks the fission operator in a zero dimesnional system
+        6. test that checks the absorption operator in a zero dimesnional system
+    eigenvalue:
+        7. test the compares the power iteration solver with the arnoldi arpack solver
+    Geometry:
+        8. test that checks the refinment method for the PolyBox Geometry
+        9. test that checks the refinment method for the TriangularTesselation Geometry
+    utils:
+        10-16.most of the utils have docs tests that checks their operation for a specific input
+    given-boundary-current:
+        17. test that computes the flux in a system, from it gets the curren on the boundary, and chekcs if the flux induced by the current on
+            the boundary is equal to the computed flux
+
+Category 2-benchmarks:
+    compared to other codes:
+        1. PWR rod benchmark
+        2. IAEA 3D benchmark
+        3. PWR MOX-UO2 benchmark
+        4. HTGR benchmark
+    GET tests:
+        5. 1 dim GET benchmark from K.Smiths paper
+        6. 2 dim GET becnhmark with coefficent calculated using openmc

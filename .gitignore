@@ -1,0 +1,15 @@
+docs/build/
+.idea
+*.egg-info
+build/
+__pycache__/
+docs/source/_static/
+tests/__pycache__/
+tests/geometry_tests/__pycache__/
+tests/geometry.xml
+tests/materials.xml
+tests/settings.xml
+tests/summary.h5
+tests/tallies.xml
+tests/tallies.out
+tests/statepoint.*
