@@ -47,7 +47,7 @@ def generalized_arnoldi(
     k, flux = la.eigs(A, 1, M, v0=v, tol=1e-10,Minv=inverse,
                       maxiter=max_iter)
     k = k[0].real
-    flux = flux.astype(float).flatten()
+    flux = np.real(flux).flatten()
     return k, flux
 
 
