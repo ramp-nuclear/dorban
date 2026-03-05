@@ -602,6 +602,7 @@ def hex2triangles(neighbors: Sequence[Sequence[int]]) -> Sequence[Sequence[int]]
 
     Examples
     --------
+    >>> from dorban.utils import triangles_with_vertex
     >>> hex_neighbors = [[1, Void(), Void(), Void(), Void(), Void()],[Void(), Void(), Void(), 0, Void(), Void()]]
     >>> neighbors=hex2triangles(hex_neighbors)
     >>> triangles_with_vertex(1, 0, neighbors)

@@ -7,7 +7,7 @@ from typing import Sequence, Tuple
 
 import numpy as np
 
-from dorban.geometry import FiniteGeometry
+from dorban.geometry.geometry import FiniteGeometry
 
 
 class Boundary(metaclass=ABCMeta):
