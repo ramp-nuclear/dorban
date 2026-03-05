@@ -16,4 +16,5 @@ and surface averaged currents. The computation process is as follows:
  - The discontinuity factors are set to :math:`\frac{1}{\phi_{c,f}}`
 
 """
-from dorban.rdfs.nem_rdf import compute_rdfs
+
+from dorban.rdfs.nem_rdf import compute_rdfs as compute_rdfs

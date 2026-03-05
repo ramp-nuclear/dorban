@@ -10,10 +10,9 @@ from dorban.system import Core, mesh_refinement
 from dorban.utils import collapse_flux
 
 
-def solve_k_fd(system: Core,
-               settings: FDSettings,
-               solver: Callable = generalized_eigenvalue_slepc
-               ) -> Tuple[float, np.array]:
+def solve_k_fd(
+    system: Core, settings: FDSettings, solver: Callable = generalized_eigenvalue_slepc
+) -> Tuple[float, np.array]:
     r"""
     function to solve the diffusion k problem using the finite differences method
 
@@ -38,12 +37,12 @@ def solve_k_fd(system: Core,
         return equation_type(system, solver, **settings.kwargs)
     core = mesh_refinement(system, settings.split)
     k, fine_flux = equation_type(core, solver, **settings.kwargs)
-    return k, collapse_flux(system.geometry,fine_flux,core.geometry.volumes,settings.split)
+    return k, collapse_flux(system.geometry, fine_flux, core.geometry.volumes, settings.split)
 
 
-def solve_k_diffusion(system: Core, solver: Callable = generalized_eigenvalue_slepc,
-                      **kwargs) -> Tuple[
-    float, np.array]:
+def solve_k_diffusion(
+    system: Core, solver: Callable = generalized_eigenvalue_slepc, **kwargs
+) -> Tuple[float, np.array]:
     """
     Solves the diffusion k eigenvalue problem of the system
 
@@ -63,13 +62,12 @@ def solve_k_diffusion(system: Core, solver: Callable = generalized_eigenvalue_sl
     """
     return solver(
         fd.cmfd_fission(system),
-        M=(fd.cmfd_absorption(system) +
-           diffusion_matrix(system.geometry, system.E, system.current_calc)),
-        **kwargs)
+        M=(fd.cmfd_absorption(system) + diffusion_matrix(system.geometry, system.E, system.current_calc)),
+        **kwargs,
+    )
 
 
-def solve_adjoint(system: Core,solver: Callable = generalized_eigenvalue_slepc
-                  , **kwargs) -> Tuple[float, np.array]:
+def solve_adjoint(system: Core, solver: Callable = generalized_eigenvalue_slepc, **kwargs) -> Tuple[float, np.array]:
     """
     Solves the adjoint of the diffusion k eigenvalue problem of the system
 
@@ -88,9 +86,5 @@ def solve_adjoint(system: Core,solver: Callable = generalized_eigenvalue_slepc
         the k eigenvalue and the corresponding adjoint flux
     """
     fission = fd.cmfd_fission(system)
-    absorber = (diffusion_matrix(system.geometry, system.E,
-                                 system.current_calc)
-                + fd.cmfd_absorption(system))
-    return solver(fission.transpose(),
-                                  M=absorber.transpose(),
-                                  **kwargs)
+    absorber = diffusion_matrix(system.geometry, system.E, system.current_calc) + fd.cmfd_absorption(system)
+    return solver(fission.transpose(), M=absorber.transpose(), **kwargs)

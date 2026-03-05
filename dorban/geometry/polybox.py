@@ -3,6 +3,7 @@ This module contains the PolyBox geometry. It can be used to model cores with
 a Cartesian grids.
 This also can be used to model multiplicative systems in non euclidean geometries
 """
+
 from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -34,9 +35,9 @@ class PolyBox(FiniteGeometry):
      according to: x,y,z.
     """
 
-    def __init__(self, dim: int,
-                 neighbors: Sequence[Sequence[Union[int, Boundary]]],
-                 lengths: Sequence[Sequence[float]]):
+    def __init__(
+        self, dim: int, neighbors: Sequence[Sequence[Union[int, Boundary]]], lengths: Sequence[Sequence[float]]
+    ):
         self.dim = dim
         self.lengths = lengths
         self.neighbors = neighbors
@@ -105,11 +106,10 @@ class PolyBox(FiniteGeometry):
          unit vector that represents the direction to the face
         """
         unit = np.zeros(self.dim)
-        unit[face // 2] = (2 * (face % 2) - 1)
+        unit[face // 2] = 2 * (face % 2) - 1
         return unit
 
-    def array_refine(self, array: np.array,
-                     split: Sequence[Sequence[int]], **kwargs) -> np.array:
+    def array_refine(self, array: np.array, split: Sequence[Sequence[int]], **kwargs) -> np.array:
         """
         refines an array according to the split parameters. For example this
         function is used in order to refine an array of densities of some
@@ -129,12 +129,16 @@ class PolyBox(FiniteGeometry):
          new array containing the same information but is suitable to the
          refined geometry
         """
-        return np.repeat(array, [np.prod(splitting) for splitting in split],
-                         **kwargs)
+        return np.repeat(array, [np.prod(splitting) for splitting in split], **kwargs)
 
     def single_cell(self, cell, boundary_conditions):
-        return self.__class__(self.dim, [boundary_conditions, ],
-                              [self.lengths[cell]])
+        return self.__class__(
+            self.dim,
+            [
+                boundary_conditions,
+            ],
+            [self.lengths[cell]],
+        )
 
     def uniform_split(self, subcells: int) -> Sequence[Sequence[int]]:
         """
@@ -159,8 +163,7 @@ class PolyBox(FiniteGeometry):
         box = Box([size] * dim, boundary_conditions=[Boundary] * (2 * dim))
         return box.boundaries
 
-    def _refine_lengths(self, split: Sequence[Sequence[int]]
-                        ) -> Sequence[Sequence[float]]:
+    def _refine_lengths(self, split: Sequence[Sequence[int]]) -> Sequence[Sequence[float]]:
         """
         Function that used in the refine_mesh method, used to refine the lengths
         of the system.
@@ -178,13 +181,13 @@ class PolyBox(FiniteGeometry):
         Sequence[Sequence[float]]
          The lengths for the refined system
         """
-        lengths = [[length / splits
-                    for length, splits in zip(cell_lengths, cell_splits)]
-                   for cell_splits, cell_lengths in zip(split, self.lengths)]
+        lengths = [
+            [length / splits for length, splits in zip(cell_lengths, cell_splits)]
+            for cell_splits, cell_lengths in zip(split, self.lengths)
+        ]
         return self.array_refine(lengths, split, axis=0)
 
-    def _refine_neighbors(self, split: Sequence[Sequence[int]]
-                          ) -> Sequence[Sequence[int]]:
+    def _refine_neighbors(self, split: Sequence[Sequence[int]]) -> Sequence[Sequence[int]]:
         """
         Function that used in the refine_mesh method, used to refine the neighbors
         of the system.
@@ -208,23 +211,25 @@ class PolyBox(FiniteGeometry):
         refined_neighbors = list(range(int(cells)))
         up_to_cells = np.hstack([[0], np.cumsum(cells_per_cell)[:-1]])
         for big_cell in range(self.cells):
-            box = Box(tuple(split[big_cell]),
-                      [None if isinstance(neigh, Boundary) else split[neigh]
-                       for neigh in self.neighbors[big_cell]])
+            box = Box(
+                tuple(split[big_cell]),
+                [None if isinstance(neigh, Boundary) else split[neigh] for neigh in self.neighbors[big_cell]],
+            )
             for small_cell in range(box.cells):
                 refined_neighbors[up_to_cells[big_cell] + small_cell] = [
-                    neighbor + up_to_cells[big_cell] if not isinstance(neighbor, Tuple)
-                    else (big_neighbor
-                          if isinstance(big_neighbor := self.neighbors[big_cell][face],
-                                        Boundary)
-                          else neighbor[1] + up_to_cells[big_neighbor])
+                    neighbor + up_to_cells[big_cell]
+                    if not isinstance(neighbor, Tuple)
+                    else (
+                        big_neighbor
+                        if isinstance(big_neighbor := self.neighbors[big_cell][face], Boundary)
+                        else neighbor[1] + up_to_cells[big_neighbor]
+                    )
                     for face, neighbor in enumerate(box.neighbors[small_cell])
                 ]
 
         return refined_neighbors
 
-    def refine_mesh(self,
-                    split: Sequence[Sequence[int]]) -> "PolyBox":
+    def refine_mesh(self, split: Sequence[Sequence[int]]) -> "PolyBox":
         """
         This function returns a new Geometry with refined mesh according to the
         split data. The split data is unique to each geometry type, and
@@ -242,8 +247,7 @@ class PolyBox(FiniteGeometry):
         PolyBox
          new Geometry with a refined mesh
         """
-        return self.__class__(self.dim, self._refine_neighbors(split),
-                              self._refine_lengths(split))
+        return self.__class__(self.dim, self._refine_neighbors(split), self._refine_lengths(split))
 
 
 Neighbor = Union[int, Boundary, Tuple[Boundary, int]]
@@ -267,27 +271,31 @@ class Box:
     Exactly 1 of sizes of neighbors and boundary conditions should be given
     """
 
-    def __init__(self, sizes: Sequence[int],
-                 sizes_of_neighbors: Optional[Sequence[Sequence[int]]] = None,
-                 boundary_conditions: Optional[Sequence[Boundary]] = None):
+    def __init__(
+        self,
+        sizes: Sequence[int],
+        sizes_of_neighbors: Optional[Sequence[Sequence[int]]] = None,
+        boundary_conditions: Optional[Sequence[Boundary]] = None,
+    ):
         if (sizes_of_neighbors, boundary_conditions).count(None) != 1:
-            raise ValueError("Exactly one of sizes_of_neighbors and "
-                             "boundary_conditions should be given. "
-                             "Instead there were"
-                             f"{[sizes_of_neighbors, boundary_conditions].count(None)}")
+            raise ValueError(
+                "Exactly one of sizes_of_neighbors and "
+                "boundary_conditions should be given. "
+                "Instead there were"
+                f"{[sizes_of_neighbors, boundary_conditions].count(None)}"
+            )
         self.dim = len(sizes)
         self.cells = np.prod(sizes)
         self.sizes = sizes
         self.sizes_of_neighbors = sizes_of_neighbors
         self.boundary_conditions = boundary_conditions
-        axises = ['x', 'y', 'z']
+        axises = ["x", "y", "z"]
         self.x, self.y, self.z = 1, 1, 1
         for ax, size in zip(axises, sizes):
             self.__setattr__(ax, size)
         self.neighbors: Sequence[Sequence[Neighbor]] = [
-            self.correct_neighbors_of_boundary_cell(
-                self.inside_neighbors(cell), cell)
-            for cell in range(self.cells)]
+            self.correct_neighbors_of_boundary_cell(self.inside_neighbors(cell), cell) for cell in range(self.cells)
+        ]
 
     def inside_neighbors(self, cell: int) -> Sequence[int]:
         """
@@ -303,10 +311,8 @@ class Box:
         Sequence[int]
          Sequence of the numbers of the neighbors of the cell
         """
-        parts = ([cell - 1, cell + 1],
-                 [cell - self.x, cell + self.x],
-                 [cell - self.x * self.y, cell + self.x * self.y])
-        return np.hstack(parts[:self.dim])
+        parts = ([cell - 1, cell + 1], [cell - self.x, cell + self.x], [cell - self.x * self.y, cell + self.x * self.y])
+        return np.hstack(parts[: self.dim])
 
     @property
     def boundaries(self) -> Sequence[Sequence[int]]:
@@ -328,20 +334,15 @@ class Box:
          Each boundary is a sequence of the number of the cells on the boundary.
         """
         cells = np.arange(self.cells)
-        left = cells[::self.x]
-        right = cells[self.x - 1::self.x]
-        back = np.add.outer(cells[::self.x * self.y],
-                            cells[:self.x]).flatten()
-        forward = np.add.outer(cells[::self.x * self.y],
-                               cells[:self.x]).flatten() + self.x * (
-                          self.y - 1)
-        down = cells[:self.x * self.y]
-        up = cells[self.cells - self.x * self.y:]
-        return [left, right, back, forward, down, up][:2 * self.dim]
+        left = cells[:: self.x]
+        right = cells[self.x - 1 :: self.x]
+        back = np.add.outer(cells[:: self.x * self.y], cells[: self.x]).flatten()
+        forward = np.add.outer(cells[:: self.x * self.y], cells[: self.x]).flatten() + self.x * (self.y - 1)
+        down = cells[: self.x * self.y]
+        up = cells[self.cells - self.x * self.y :]
+        return [left, right, back, forward, down, up][: 2 * self.dim]
 
-    def correct_neighbors_of_boundary_cell(self, neighbors: Sequence[int],
-                                           cell: int
-                                           ) -> List[Neighbor]:
+    def correct_neighbors_of_boundary_cell(self, neighbors: Sequence[int], cell: int) -> List[Neighbor]:
         """
         corrects the sequence of neighbors of a cell on the boundary
 
@@ -362,16 +363,17 @@ class Box:
          the number of the neighboring cell inside the box outside self.
         """
         if self.sizes_of_neighbors is not None:
-            return [neigh if cell not in self.boundaries[face] else
-                    (Boundary, self.neighbor_in_other_box(cell, face)) for
-                    face, neigh in enumerate(neighbors)]
+            return [
+                neigh if cell not in self.boundaries[face] else (Boundary, self.neighbor_in_other_box(cell, face))
+                for face, neigh in enumerate(neighbors)
+            ]
         else:
-            return [neigh if cell not in self.boundaries[face] else
-                    self.boundary_conditions[face] for
-                    face, neigh in enumerate(neighbors)]
+            return [
+                neigh if cell not in self.boundaries[face] else self.boundary_conditions[face]
+                for face, neigh in enumerate(neighbors)
+            ]
 
-    def neighbor_in_other_box(self, cell: int, face: int
-                              ) -> Union[None, np.ndarray]:
+    def neighbor_in_other_box(self, cell: int, face: int) -> Union[None, np.ndarray]:
         """
         Computes the number of the neighbors of a cell in another box.
         It is needed in the case that cell is on the boundary.
@@ -397,11 +399,10 @@ class Box:
         """
         if self.sizes_of_neighbors[face] is None:
             return None
-        cor = np.array(np.unravel_index(cell, self.sizes, order="F"),
-                       dtype=int)
-        return np.ravel_multi_index(cor + self.direction(cor, face),
-                                    self.sizes_of_neighbors[face],
-                                    mode="wrap", order="F")
+        cor = np.array(np.unravel_index(cell, self.sizes, order="F"), dtype=int)
+        return np.ravel_multi_index(
+            cor + self.direction(cor, face), self.sizes_of_neighbors[face], mode="wrap", order="F"
+        )
 
     def direction(self, cor: Sequence[int], face: int) -> np.array:
         """
@@ -427,8 +428,7 @@ class Box:
         return unit
 
 
-def dim3_from_dim2(plane: PolyBox, z_lengths: np.array,
-                   boundary_conditions: Tuple[Boundary, Boundary]) -> PolyBox:
+def dim3_from_dim2(plane: PolyBox, z_lengths: np.array, boundary_conditions: Tuple[Boundary, Boundary]) -> PolyBox:
     """
     function to help generate a model of a 3 dimensional core using a model of
     a plane section and the data about the lengths of the levels in the z axis
@@ -449,15 +449,16 @@ def dim3_from_dim2(plane: PolyBox, z_lengths: np.array,
      3 dimensional model of the core
     """
     # noinspection PyTypeChecker
-    z_neighbors = ([(boundary_conditions[0], 1)]
-                   + [(i, i + 2) for i in range(len(z_lengths) - 1)]
-                   + [(len(z_lengths) - 1, boundary_conditions[1])]
-                   )
+    z_neighbors = (
+        [(boundary_conditions[0], 1)]
+        + [(i, i + 2) for i in range(len(z_lengths) - 1)]
+        + [(len(z_lengths) - 1, boundary_conditions[1])]
+    )
     neighbors = [
         [n if isinstance(n, Boundary) else n + h * plane.cells for n in neigh]
-        + [n if isinstance(n, Boundary) else n * plane.cells + cell
-           for n in pair] for h, pair in enumerate(z_neighbors)
-        for cell, neigh in enumerate(plane.neighbors)]
-    lengths = [list(plane_length) + [z_length]
-               for z_length in z_lengths for plane_length in plane.lengths]
+        + [n if isinstance(n, Boundary) else n * plane.cells + cell for n in pair]
+        for h, pair in enumerate(z_neighbors)
+        for cell, neigh in enumerate(plane.neighbors)
+    ]
+    lengths = [list(plane_length) + [z_length] for z_length in z_lengths for plane_length in plane.lengths]
     return PolyBox(3, neighbors, lengths)

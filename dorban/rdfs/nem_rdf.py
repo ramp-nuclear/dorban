@@ -3,27 +3,35 @@ THis modules allows to compute rdfs using nem approximation, i.e assuming that
 the integral of the flux across the traverse direction is a polynomial of degree
 4
 """
+
 from itertools import product
 from typing import Optional
 
 import numpy as np
 
-from dorban.system import Core
-from dorban.cross_sections_operators import _absorb as absorb, _nufission as nufission
+from dorban.cross_sections_operators import _absorb as absorb
+from dorban.cross_sections_operators import _nufission as nufission
 from dorban.geometry.boundary_conditions import Boundary
 from dorban.materials import CrossSectionData
 from dorban.nem.nem_coupling_rhs import _leakage_rhs
 from dorban.nem.nem_matrices import single_cell_matrix
+from dorban.system import Core
 
 
-def compute_boundary_fluxes_using_nem(current_right: np.array,
-                                      current_left: np.array,
-                                      transverse_leakage: np.array,
-                                      l: float, l_left: float, l_right: float, transverse_length: float,
-                                      transverse_leakage_left: np.array,
-                                      transverse_leakage_right: np.array,
-                                      mat: CrossSectionData, k: float, flux: Optional[np.array] = None) -> tuple[
-    np.array, np.array]:
+def compute_boundary_fluxes_using_nem(
+    current_right: np.array,
+    current_left: np.array,
+    transverse_leakage: np.array,
+    ll: float,
+    l_left: float,
+    l_right: float,
+    transverse_length: float,
+    transverse_leakage_left: np.array,
+    transverse_leakage_right: np.array,
+    mat: CrossSectionData,
+    k: float,
+    flux: Optional[np.array] = None,
+) -> tuple[np.array, np.array]:
     r"""
     Function to compute the fluxes on two opposite boundaries of a cartesian two dimensional cell,
     assuming the currents on the boundaries of the cell are known. The k multiplication factor is also known.
@@ -51,7 +59,7 @@ def compute_boundary_fluxes_using_nem(current_right: np.array,
      The current on the left boundary.
     transverse_leakage: np.array
      The average leakage from the transverse directions.
-    l: float
+    ll: float
      The length of the cell.
     l_left: float
      The length of the cell to the left.
@@ -78,28 +86,26 @@ def compute_boundary_fluxes_using_nem(current_right: np.array,
      Tuple of the flux on the left boundary and the flux on the right boundary.
     """
     E = mat.E
-    D = np.diag(mat.diffusion / l)
+    D = np.diag(mat.diffusion / ll)
     matrix = np.zeros((4 * E, 4 * E))
-    matrix[np.arange(0, 3 * E)] = single_cell_matrix(E, l, mat.diffusion, absorb(mat), nufission(mat) / k)
-    matrix[3 * E:, :] = np.hstack([-3 * D, -D / 5, -D, -D / 2])
+    matrix[np.arange(0, 3 * E)] = single_cell_matrix(E, ll, mat.diffusion, absorb(mat), nufission(mat) / k)
+    matrix[3 * E :, :] = np.hstack([-3 * D, -D / 5, -D, -D / 2])
     rhs = np.zeros(4 * E)
-    rhs[:E] = (current_right - current_left) / l
+    rhs[:E] = (current_right - current_left) / ll
     if np.any(flux):
         average_flux = flux
     else:
         average_flux = -np.linalg.solve(
-            absorb(mat) - nufission(mat) / k, (rhs[:E] + (transverse_leakage / transverse_length)).flatten())
+            absorb(mat) - nufission(mat) / k, (rhs[:E] + (transverse_leakage / transverse_length)).flatten()
+        )
     cell = transverse_leakage
     left = transverse_leakage_left
     right = transverse_leakage_right
-    rhs[E:3 * E] = _leakage_rhs(transverse_length, cell, left, right, l, l_left,
-                                l_right)
-    rhs[3 * E:4 * E] = current_right
+    rhs[E : 3 * E] = _leakage_rhs(transverse_length, cell, left, right, ll, l_left, l_right)
+    rhs[3 * E : 4 * E] = current_right
     coefficients = np.linalg.solve(matrix, rhs)
-    a2, a4, a1, a3 = coefficients[:E], coefficients[E:2 * E], \
-        coefficients[2 * E:3 * E], coefficients[3 * E:4 * E]
-    return (average_flux - a1 / 2 + a2 / 2), (
-            average_flux + a1 / 2 + a2 / 2)
+    a2, a1 = coefficients[:E], coefficients[2 * E : 3 * E]
+    return (average_flux - a1 / 2 + a2 / 2), (average_flux + a1 / 2 + a2 / 2)
 
 
 def compute_rdfs(system: Core, currents: np.array, k: float, fluxes: Optional[np.array] = None) -> np.array:
@@ -135,32 +141,56 @@ def compute_rdfs(system: Core, currents: np.array, k: float, fluxes: Optional[np
     leakages = {0: leakage_x, 1: leakage_y}
     C = system.geometry.cells
     rdfs = np.zeros((C, 4, system.E))
-    for (cell, neighbors), axis in product(
-            enumerate(system.geometry.neighbors), [0, 1]):
+    for (cell, neighbors), axis in product(enumerate(system.geometry.neighbors), [0, 1]):
         current_right = currents[cell, 2 * axis + 1]
         current_left = currents[cell, 2 * axis]
         transverse_leakage = leakages[not axis][cell]
-        l = 2 * system.geometry.distance_to_face(cell, 2 * axis)
-        l_left = 2 * system.geometry.distance_to_face(n, 2 * axis) if not \
-            isinstance(n := neighbors[2 * axis], Boundary) else l
-        l_right = 2 * system.geometry.distance_to_face(n, 2 * axis) if not \
-            isinstance(n := neighbors[2 * axis + 1], Boundary) else l
-        transverse_l = 2 * system.geometry.distance_to_face(cell,
-                                                           2 * (not axis))
-        transverse_left = leakages[not axis][n] if not isinstance(n := neighbors[2 * axis],
-                                                                 Boundary) else transverse_leakage
-        transverse_right = leakages[not axis][n] if not isinstance(n := neighbors[2 * axis + 1],
-                                                                  Boundary) else transverse_leakage
+        ll = 2 * system.geometry.distance_to_face(cell, 2 * axis)
+        l_left = (
+            2 * system.geometry.distance_to_face(n, 2 * axis)
+            if not isinstance(n := neighbors[2 * axis], Boundary)
+            else ll
+        )
+        l_right = (
+            2 * system.geometry.distance_to_face(n, 2 * axis)
+            if not isinstance(n := neighbors[2 * axis + 1], Boundary)
+            else ll
+        )
+        transverse_l = 2 * system.geometry.distance_to_face(cell, 2 * (not axis))
+        transverse_left = (
+            leakages[not axis][n] if not isinstance(n := neighbors[2 * axis], Boundary) else transverse_leakage
+        )
+        transverse_right = (
+            leakages[not axis][n] if not isinstance(n := neighbors[2 * axis + 1], Boundary) else transverse_leakage
+        )
         mat = system.isotopes[cell]
         if np.any(fluxes):
             rdfs[cell, slice(2 * axis, 2 * axis + 2)] = compute_boundary_fluxes_using_nem(
-                current_right, current_left, transverse_leakage, l, l_left, l_right,
-                transverse_l, transverse_left, transverse_right, mat, k, fluxes[cell])
+                current_right,
+                current_left,
+                transverse_leakage,
+                ll,
+                l_left,
+                l_right,
+                transverse_l,
+                transverse_left,
+                transverse_right,
+                mat,
+                k,
+                fluxes[cell],
+            )
         else:
             rdfs[cell, slice(2 * axis, 2 * axis + 2)] = compute_boundary_fluxes_using_nem(
-                current_right, current_left, transverse_leakage, l, l_left,
+                current_right,
+                current_left,
+                transverse_leakage,
+                ll,
+                l_left,
                 l_right,
-                transverse_l, transverse_left, transverse_right, mat, k)
+                transverse_l,
+                transverse_left,
+                transverse_right,
+                mat,
+                k,
+            )
     return rdfs
-
-

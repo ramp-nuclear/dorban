@@ -16,7 +16,7 @@ import numpy as np
 
 
 @numba.njit()
-def single_cell_matrix(E: int, l: float, D: np.array, absorber: np.array, fission: np.array) -> np.array:
+def single_cell_matrix(E: int, ll: float, D: np.array, absorber: np.array, fission: np.array) -> np.array:
     r"""
     This function builds the NEM equations of a single cell, which are the first three moments of the diffusion equations.
 
@@ -24,7 +24,7 @@ def single_cell_matrix(E: int, l: float, D: np.array, absorber: np.array, fissio
     ----------
     E: int
      The number of energy groups
-    l: float
+    ll: float
      The width of the cell
     D: np.array
      The diffusion coefficient of the cell. Array of shape E
@@ -39,26 +39,36 @@ def single_cell_matrix(E: int, l: float, D: np.array, absorber: np.array, fissio
      An array of shape  3 * E x 4 * E which represents the first three moment of the diffusion equation in :math:`a^1_i`
      coordinates.
     """
-    D = np.diag(D) / l
+    D = np.diag(D) / ll
     diff_absorber = np.zeros((3 * E, 4 * E))
-    diff_absorber[:E, :E] = -6 * D / l
-    diff_absorber[:E, E:2 * E] = -2 / 5 * D / l
-    diff_absorber[E:2 * E, :E] = -35 * absorber
-    diff_absorber[E:2 * E, E:2 * E] = 140 * D / l + absorber
-    diff_absorber[2 * E:3 * E, 2 * E:3 * E] = -10 * absorber
-    diff_absorber[2 * E:3 * E, 3 * E:4 * E] = 60 * D / l + absorber
+    diff_absorber[:E, :E] = -6 * D / ll
+    diff_absorber[:E, E : 2 * E] = -2 / 5 * D / ll
+    diff_absorber[E : 2 * E, :E] = -35 * absorber
+    diff_absorber[E : 2 * E, E : 2 * E] = 140 * D / ll + absorber
+    diff_absorber[2 * E : 3 * E, 2 * E : 3 * E] = -10 * absorber
+    diff_absorber[2 * E : 3 * E, 3 * E : 4 * E] = 60 * D / ll + absorber
     fission_mat = np.zeros((3 * E, 4 * E))
-    fission_mat[E:2 * E, :E] = -35 * fission
-    fission_mat[E:2 * E, E:2 * E] = fission
-    fission_mat[2 * E:3 * E, 2 * E:3 * E] = -10 * fission
-    fission_mat[2 * E:3 * E, 3 * E:4 * E] = fission
+    fission_mat[E : 2 * E, :E] = -35 * fission
+    fission_mat[E : 2 * E, E : 2 * E] = fission
+    fission_mat[2 * E : 3 * E, 2 * E : 3 * E] = -10 * fission
+    fission_mat[2 * E : 3 * E, 3 * E : 4 * E] = fission
     return diff_absorber - fission_mat
 
 
 @numba.njit()
-def nem_mat(E: int, l1: float, l2: float, D1: np.array, D2: np.array, absorber1: np.array, absorber2: np.array,
-            fission1: np.array, fission2: np.array, dis1: np.array,
-            dis2: np.array) -> np.array:
+def nem_mat(
+    E: int,
+    l1: float,
+    l2: float,
+    D1: np.array,
+    D2: np.array,
+    absorber1: np.array,
+    absorber2: np.array,
+    fission1: np.array,
+    fission2: np.array,
+    dis1: np.array,
+    dis2: np.array,
+) -> np.array:
     r"""
     Function that constructs the matrix used for the calculation of the NEM coupling coefficients
     between two adjacent cells.
@@ -113,18 +123,18 @@ def nem_mat(E: int, l1: float, l2: float, D1: np.array, D2: np.array, absorber1:
             full_matrix[row, col] = second_cell[index_row, index_col]
     D1 = np.diag(D1) / l1
     D2 = np.diag(D2) / l2
-    full_matrix[6 * E:7 * E, :] = np.hstack(
-        (-3 * D1, -D1 / 5, -3 * D2, -D2 / 5, -D1, -D1 / 2, D2, D2 / 2))
-    full_matrix[7 * E:8 * E, np.hstack(
-        (np.arange(E), np.arange(2 * E, 3 * E), np.arange(4 * E, 5 * E),
-         np.arange(6 * E, 7 * E)))] = \
-        np.hstack((dis1, -dis2, dis1, dis2))
+    full_matrix[6 * E : 7 * E, :] = np.hstack((-3 * D1, -D1 / 5, -3 * D2, -D2 / 5, -D1, -D1 / 2, D2, D2 / 2))
+    full_matrix[
+        7 * E : 8 * E,
+        np.hstack((np.arange(E), np.arange(2 * E, 3 * E), np.arange(4 * E, 5 * E), np.arange(6 * E, 7 * E))),
+    ] = np.hstack((dis1, -dis2, dis1, dis2))
     return full_matrix
 
 
 @numba.njit()
-def nem_boundary_mat(E: int, l: float, D: np.array, absorber: np.array, fission: np.array,
-                     boundary_eq: np.array) -> np.array:
+def nem_boundary_mat(
+    E: int, ll: float, D: np.array, absorber: np.array, fission: np.array, boundary_eq: np.array
+) -> np.array:
     r"""
     Function that constructs the matrix used for the calculation of the NEM coupling coefficients
     between a cell and a boundary condition.
@@ -137,7 +147,7 @@ def nem_boundary_mat(E: int, l: float, D: np.array, absorber: np.array, fission:
     ----------
     E: int
      The number of energy groups.
-    l: float
+    ll: float
      The width of the cell.
     D: np.array
      The diffusion coefficient of the cell.
@@ -155,6 +165,6 @@ def nem_boundary_mat(E: int, l: float, D: np.array, absorber: np.array, fission:
     """
     rows = np.arange(0, 3 * E)
     mat = np.zeros((4 * E, 4 * E))
-    mat[rows] = single_cell_matrix(E, l, D,absorber,fission)
-    mat[3 * E:4 * E, :] = boundary_eq
+    mat[rows] = single_cell_matrix(E, ll, D, absorber, fission)
+    mat[3 * E : 4 * E, :] = boundary_eq
     return mat

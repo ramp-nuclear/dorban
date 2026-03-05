@@ -1,6 +1,7 @@
 """
 This is an eigenvalue solver that uses the eigs function of scipy
 """
+
 from typing import Tuple, Union
 
 import numpy as np
@@ -9,10 +10,15 @@ import scipy.sparse.linalg as la
 
 
 def generalized_arnoldi(
-        A: Union[sparse.spmatrix, np.array, la.LinearOperator],
-        M: Union[sparse.spmatrix, np.array, la.LinearOperator],
-        v: np.array = None, rtol_vector=1e-4, lin_atol=1e-8, lin_rtol=1e-8,
-        max_iter=np.inf, **kwargs) -> Tuple[float, np.array]:
+    A: Union[sparse.spmatrix, np.array, la.LinearOperator],
+    M: Union[sparse.spmatrix, np.array, la.LinearOperator],
+    v: np.array = None,
+    rtol_vector=1e-4,
+    lin_atol=1e-8,
+    lin_rtol=1e-8,
+    max_iter=np.inf,
+    **kwargs,
+) -> Tuple[float, np.array]:
     r"""
     this is an eigenvalue solver based on the arnoldi algorithm, it uses lgmres
     to solve linear equations.
@@ -44,18 +50,23 @@ def generalized_arnoldi(
     inverse = la.LinearOperator(M.shape, Minv)
 
     # noinspection PyTypeChecker
-    k, flux = la.eigs(A, 1, M, v0=v, tol=1e-10,Minv=inverse,
-                      maxiter=max_iter)
+    k, flux = la.eigs(A, 1, M, v0=v, tol=1e-10, Minv=inverse, maxiter=max_iter)
     k = k[0].real
     flux = np.real(flux).flatten()
     return k, flux
 
 
 def shift_invert_arnoldi(
-        A: Union[sparse.spmatrix, np.array, la.LinearOperator],
-        M: Union[sparse.spmatrix, np.array, la.LinearOperator], k: float = 1,
-        v: np.array = None, rtol_vector=1e-5, lin_atol=1e-8, lin_rtol=1e-8,
-        max_iter=np.inf, **kwargs) -> (complex, np.array):
+    A: Union[sparse.spmatrix, np.array, la.LinearOperator],
+    M: Union[sparse.spmatrix, np.array, la.LinearOperator],
+    k: float = 1,
+    v: np.array = None,
+    rtol_vector=1e-5,
+    lin_atol=1e-8,
+    lin_rtol=1e-8,
+    max_iter=np.inf,
+    **kwargs,
+) -> (complex, np.array):
     r"""
     this is an eigenvalue solver based on the shifted arnoldi algorithm,
     it uses lgmres to solve linear equations.
@@ -85,9 +96,9 @@ def shift_invert_arnoldi(
         return la.lgmres(A - k * M, vec, atol=lin_atol, rtol=lin_rtol)[0]
 
     # noinspection PyTypeChecker
-    k, flux = la.eigs(A, 1, M, v0=v, tol=rtol_vector, sigma=k,
-                      maxiter=max_iter,
-                      OPinv=la.LinearOperator(M.shape, OPinv))
+    k, flux = la.eigs(
+        A, 1, M, v0=v, tol=rtol_vector, sigma=k, maxiter=max_iter, OPinv=la.LinearOperator(M.shape, OPinv)
+    )
     k = k[0].real
     flux = flux.astype(float).flatten()
     return k, flux

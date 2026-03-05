@@ -1,4 +1,5 @@
 """This module contains the finite geometry protocol as well as the Point geometry"""
+
 from typing import Protocol, Sequence, Union
 
 import numpy as np
@@ -48,9 +49,8 @@ class FiniteGeometry(Protocol):
     dim: int
     neighbors: Sequence[Sequence[int]]
     cells: int
-    lengths: Union[np.array,Sequence[np.array]]
+    lengths: Union[np.array, Sequence[np.array]]
     volumes: np.array
-
 
     def surface_area(self, cell: int, face: int) -> float:
         """
@@ -66,7 +66,7 @@ class FiniteGeometry(Protocol):
         float
          the surface area of a face of a cell
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def distance_to_face(self, cell: int, face: int) -> float:
         """
@@ -85,7 +85,7 @@ class FiniteGeometry(Protocol):
         float
          the distance from the center of the cell to the face
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def opposite_face(self, face: int) -> int:
         """
@@ -103,7 +103,7 @@ class FiniteGeometry(Protocol):
         int
          the number of the face in the other cell
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def direction(self, face: int) -> np.array:
         """
@@ -120,7 +120,7 @@ class FiniteGeometry(Protocol):
         np.array
          Unit vector that represents the direction to the face
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def array_refine(self, array: np.array, split, **kwargs) -> np.array:
         """
@@ -141,7 +141,7 @@ class FiniteGeometry(Protocol):
          new array containing the same information but is suitable to the
          refined geometry
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     def refine_mesh(self, split) -> "FiniteGeometry":
         """
@@ -159,14 +159,14 @@ class FiniteGeometry(Protocol):
         FiniteGeometry
          new Geometry with a refined mesh
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     # required for rdf generation
     def single_cell(self, cell, boundary_condtions):
         """
         method for generating a geometry that contains a single cell.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     # required for rdf generation
     def uniform_split(self, subcells: int):
@@ -179,7 +179,7 @@ class FiniteGeometry(Protocol):
         subcells:int
          the number of cells to which each axis has to be split
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     # required for rdf generation
     def simple_boundaries(self, dim, size) -> Sequence[Sequence[int]]:
@@ -189,7 +189,7 @@ class FiniteGeometry(Protocol):
         be a 3D box with sides of length size. This used for calculation of
         surface flux in rdf generation
         """
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class Point:

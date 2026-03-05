@@ -1,7 +1,7 @@
 import numpy as np
 
-from dorban.system import Core
 from dorban.geometry.boundary_conditions import Boundary
+from dorban.system import Core
 from dorban.utils import op_face
 
 
@@ -33,7 +33,7 @@ def debug_discontinuity_factors(core: Core, maximal_allowed_value: float = 5.0) 
      The elements of the list are tuples of cell number, face number and neighbor number. The discontinuity factors between
      the cell and its given neighbor across the given face are wrong.
     """
-    if not 'df' in core.current_calc.__dict__:
+    if "df" not in core.current_calc.__dict__:
         return []
     bad_cells = []
     for cell, neigh in enumerate(core.geometry.neighbors):

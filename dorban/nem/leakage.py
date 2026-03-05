@@ -1,6 +1,7 @@
 """
 this file will handle the leakage computations for NEM
 """
+
 from typing import Tuple
 
 import numba
@@ -13,10 +14,14 @@ Length = float
 
 
 @numba.njit()
-def leakage_coefficients(cell_leakage: np.array, left_leakage: np.array,
-                         right_leakage: np.array, length_c: Length,
-                         length_l: Length, length_r: Length,
-                         ) -> Tuple[np.array, np.array]:
+def leakage_coefficients(
+    cell_leakage: np.array,
+    left_leakage: np.array,
+    right_leakage: np.array,
+    length_c: Length,
+    length_l: Length,
+    length_r: Length,
+) -> Tuple[np.array, np.array]:
     """
     The shape of the axial leakage is assumed to be quadratic, it is determined
     by the leakage in the cell and the leakage at the adjoin cells, there are
@@ -51,19 +56,39 @@ def leakage_coefficients(cell_leakage: np.array, left_leakage: np.array,
     the quadratic one.
     """
     m = (length_c + length_l) * (length_c + length_r) * (length_c + length_l + length_r)
-    p1 = 1 / m * length_c * ((right_leakage - cell_leakage)
-                             * (length_c + 2 * length_l) * (length_c + length_l)
-                             + (cell_leakage - left_leakage)
-                             * (length_c + 2 * length_r) * (length_c + length_r))
-    p2 = 1 / m * length_c ** 2 * \
-         ((right_leakage - cell_leakage) * (length_c + length_l) +
-          (left_leakage - cell_leakage) * (length_c + length_r))
+    p1 = (
+        1
+        / m
+        * length_c
+        * (
+            (right_leakage - cell_leakage) * (length_c + 2 * length_l) * (length_c + length_l)
+            + (cell_leakage - left_leakage) * (length_c + 2 * length_r) * (length_c + length_r)
+        )
+    )
+    p2 = (
+        1
+        / m
+        * length_c**2
+        * (
+            (right_leakage - cell_leakage) * (length_c + length_l)
+            + (left_leakage - cell_leakage) * (length_c + length_r)
+        )
+    )
     return p1, p2
 
 
 @numba.njit()
-def leakage(neighbors: np.array, distances: np.array, surfaces_areas: np.array, dc: np.array, df: np.array,
-            coupling: np.array, E: int, flux: np.array, dim: int) -> np.array:
+def leakage(
+    neighbors: np.array,
+    distances: np.array,
+    surfaces_areas: np.array,
+    dc: np.array,
+    df: np.array,
+    coupling: np.array,
+    E: int,
+    flux: np.array,
+    dim: int,
+) -> np.array:
     r"""
     Computes the average leakage at all directions from each cell, assuming the flux is known. The computation of
     current is abased on the modified Fick's Law :math:`J=-D\nabla\phi+\hat{D}\phi`.
@@ -99,21 +124,25 @@ def leakage(neighbors: np.array, distances: np.array, surfaces_areas: np.array, 
     result = np.zeros((neighbors.shape[0], dim, E))
     for cell, adj in enumerate(neighbors):
         for axis in range(dim):
-            left, right = adj[2 * axis:2 * axis + 2]
+            left, right = adj[2 * axis : 2 * axis + 2]
             if right >= 0:
-                right_current = current_between_two_cells(cell, right, axis, distances, surfaces_areas, dc, df,
-                                                          coupling, E, flux)
+                right_current = current_between_two_cells(
+                    cell, right, axis, distances, surfaces_areas, dc, df, coupling, E, flux
+                )
             elif right == -1:
-                right_current = current_cell_and_void(surfaces_areas[cell, 2 * axis + 1],
-                                                      coupling[cell, 2 * axis + 1], E, flux[cell * E:cell * E + E])
+                right_current = current_cell_and_void(
+                    surfaces_areas[cell, 2 * axis + 1], coupling[cell, 2 * axis + 1], E, flux[cell * E : cell * E + E]
+                )
             else:
                 right_current = np.zeros(E)
             if left >= 0:
-                left_current = -current_between_two_cells(left, cell, axis, distances, surfaces_areas, dc, df,
-                                                          coupling, E, flux)
+                left_current = -current_between_two_cells(
+                    left, cell, axis, distances, surfaces_areas, dc, df, coupling, E, flux
+                )
             elif left == -1:
-                left_current = current_cell_and_void(surfaces_areas[cell, 2 * axis],
-                                                     coupling[cell, 2 * axis], E, flux[cell * E:cell * E + E])
+                left_current = current_cell_and_void(
+                    surfaces_areas[cell, 2 * axis], coupling[cell, 2 * axis], E, flux[cell * E : cell * E + E]
+                )
             else:
                 left_current = np.zeros(E)
             result[cell, axis, :] = (right_current + left_current) / surfaces_areas[cell, 2 * axis + 1]
@@ -121,24 +150,44 @@ def leakage(neighbors: np.array, distances: np.array, surfaces_areas: np.array, 
 
 
 @numba.njit()
-def current_between_two_cells(cell: int, neighbor: int, axis: int, distances: np.array, surfaces_areas: np.array,
-                              dc: np.array, df: np.array,
-                              coupling: np.array, E: int, flux: np.array) -> np.array:
+def current_between_two_cells(
+    cell: int,
+    neighbor: int,
+    axis: int,
+    distances: np.array,
+    surfaces_areas: np.array,
+    dc: np.array,
+    df: np.array,
+    coupling: np.array,
+    E: int,
+    flux: np.array,
+) -> np.array:
     """
     Function that computes the average current between two cells, assuming the flux is known using the modified Fick's law
     """
-    return np.sum(np.reshape(
-        (_values(dc[cell], dc[neighbor], distances[cell, 2 * axis + 1],
-                 distances[neighbor, 2 * axis + 1],
-                 df[cell, 2 * axis + 1], df[neighbor, 2 * axis],
-                 surfaces_areas[cell, 2 * axis + 1], coupling[cell, 2 * axis + 1])) *
-        np.hstack((flux[neighbor * E:neighbor * E + E],
-                   flux[cell * E:cell * E + E])), (2, E)), axis=0)
+    return np.sum(
+        np.reshape(
+            (
+                _values(
+                    dc[cell],
+                    dc[neighbor],
+                    distances[cell, 2 * axis + 1],
+                    distances[neighbor, 2 * axis + 1],
+                    df[cell, 2 * axis + 1],
+                    df[neighbor, 2 * axis],
+                    surfaces_areas[cell, 2 * axis + 1],
+                    coupling[cell, 2 * axis + 1],
+                )
+            )
+            * np.hstack((flux[neighbor * E : neighbor * E + E], flux[cell * E : cell * E + E])),
+            (2, E),
+        ),
+        axis=0,
+    )
 
 
 @numba.njit()
-def current_cell_and_void(surface_area: float,
-                          coupling: np.array, E: int, flux: np.array) -> np.array:
+def current_cell_and_void(surface_area: float, coupling: np.array, E: int, flux: np.array) -> np.array:
     """
     Function that computes the average current between a cell and void boundary condition,
      assuming the flux is known using the modified Fick's law

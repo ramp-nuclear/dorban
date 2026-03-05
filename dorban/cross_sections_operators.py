@@ -2,6 +2,7 @@
 This module contains function generating the cross sections related matrices
 like the fission matrix and the absorption matrix
 """
+
 from typing import Callable, Sequence
 
 import numpy as np
@@ -13,9 +14,11 @@ from dorban.utils import sparse_columns, tensor_product
 
 
 def _nufission(isotope: CrossSectionData) -> np.array:
-    return np.outer(isotope.chi / sum(isotope.chi),
-                    isotope.nusigmaf) if isotope.isfissile else np.zeros_like(
-        isotope.scatter)
+    return (
+        np.outer(isotope.chi / sum(isotope.chi), isotope.nusigmaf)
+        if isotope.isfissile
+        else np.zeros_like(isotope.scatter)
+    )
 
 
 def _absorb(isotope: CrossSectionData) -> np.array:
@@ -44,14 +47,15 @@ def fission_matrix(system: Core) -> spar.spmatrix:
     nonzero = np.nonzero(values)[0]
     try:
         return spar.csr_matrix(
-            (values[nonzero], (row_indices[nonzero], col_indices[nonzero])),
-            shape=(system.size, system.size))
+            (values[nonzero], (row_indices[nonzero], col_indices[nonzero])), shape=(system.size, system.size)
+        )
     except TypeError:  # happens if there is no fissile material in the system
         return spar.csr_matrix((system.size, system.size))
 
 
-def block_values(isotopes: Sequence[CrossSectionData],
-                 material_matrix: Callable[[CrossSectionData], np.array]) -> np.array:
+def block_values(
+    isotopes: Sequence[CrossSectionData], material_matrix: Callable[[CrossSectionData], np.array]
+) -> np.array:
     """
     Function that constructs and returns a numpy array which contains the
     values of the callable material_matrix on each of the CrossSectionsData in
@@ -96,5 +100,5 @@ def sigma_a(system: Core) -> spar.csr_matrix:
     values = block_values(system.isotopes, _absorb)
     nonzero = np.nonzero(values)[0]
     return spar.coo_matrix(
-        (values[nonzero], (row_indices[nonzero], col_indices[nonzero])),
-        shape=(system.size, system.size)).tocsr()
+        (values[nonzero], (row_indices[nonzero], col_indices[nonzero])), shape=(system.size, system.size)
+    ).tocsr()

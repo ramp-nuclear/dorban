@@ -29,10 +29,8 @@ def volumes(system: Core, inverse: bool = False) -> csr_matrix:
     csr_matrix
      diagonal sparse matrix of the volumes in the csr format
     """
-    volumes = np.array([system.geometry.volumes[cell//system.E] for cell in
-                        range(system.size)])
-    return spdiags(1 / volumes if inverse else volumes, 0, system.size,
-                   system.size, format="csr")
+    volumes = np.array([system.geometry.volumes[cell // system.E] for cell in range(system.size)])
+    return spdiags(1 / volumes if inverse else volumes, 0, system.size, system.size, format="csr")
 
 
 def cmfd_fission(system: Core) -> csr_matrix:
@@ -91,8 +89,6 @@ def boundary_current(geometry: FiniteGeometry, E: int) -> np.array:
     for cell in range(geometry.cells):
         for face, neighbor in enumerate(geometry.neighbors[cell]):
             if isinstance(neighbor, CurrentCondition):
-                index, value = neighbor.boundary_current(E, cell,
-                                                         geometry.surface_area(
-                                                             cell, face))
+                index, value = neighbor.boundary_current(E, cell, geometry.surface_area(cell, face))
                 current[index] += value
     return current

@@ -2,16 +2,16 @@
 This module contains the CMFD accelerated solution of the nem formulation of
 the diffusion equation
 """
-from typing import Optional, Tuple, Sequence
+
+from typing import Optional, Sequence
 
 import numba
 import numpy as np
 
 from dorban.geometry.boundary_conditions import Boundary
 from dorban.geometry.geometry import FiniteGeometry
-
-from dorban.utils import op_face
 from dorban.system import IsotopeData
+from dorban.utils import op_face
 
 
 class CMFDCurrentCalculator:
@@ -45,22 +45,19 @@ class CMFDCurrentCalculator:
 
     """
 
-    def __init__(self, dc: np.array, dim: int,
-                 coupling: Optional[np.array] = None,
-                 df: Optional[np.array] = None):
+    def __init__(self, dc: np.array, dim: int, coupling: Optional[np.array] = None, df: Optional[np.array] = None):
         self.dc = dc
         self.dim = dim
         try:
             self.E = dc.shape[1]
         except IndexError:  # might happen if there is only 1 energy group
             self.E = 1
-        self.coupling = coupling if coupling is not None else np.zeros(
-            (dc.shape[0], 2 * dim, self.E))
+        self.coupling = coupling if coupling is not None else np.zeros((dc.shape[0], 2 * dim, self.E))
         self.df = df if df is not None else np.ones_like(self.coupling)
 
-    def compute_current_coefficients(self, cell: int, neighbor: int, face: int,
-                                     distances: np.array, surface_areas: np.array
-                                     ) -> tuple[np.array, np.array, np.array]:
+    def compute_current_coefficients(
+        self, cell: int, neighbor: int, face: int, distances: np.array, surface_areas: np.array
+    ) -> tuple[np.array, np.array, np.array]:
         """
         This method computes the coefficients in the diffusion matrix
          that represents the current between a cell and its neighbor
@@ -85,50 +82,59 @@ class CMFDCurrentCalculator:
          appear, the column indices in the diffusion matrix in which the coefficients
          appear, the values of the diffusion matrix
         """
-        return _compute(cell, self.E, neighbor, self.dc[cell], self.dc[neighbor], distances[cell, face],
-                        distances[neighbor, face], self.df[cell, face], self.df[neighbor, op_face(face)],
-                        surface_areas[cell, face], self.coupling[cell, face])
+        return _compute(
+            cell,
+            self.E,
+            neighbor,
+            self.dc[cell],
+            self.dc[neighbor],
+            distances[cell, face],
+            distances[neighbor, face],
+            self.df[cell, face],
+            self.df[neighbor, op_face(face)],
+            surface_areas[cell, face],
+            self.coupling[cell, face],
+        )
 
-    def mesh_refine(self, geo: FiniteGeometry, split: Sequence, refgeo: FiniteGeometry,
-                    ) -> "CMFDCurrentCalculator":
+    def mesh_refine(
+        self,
+        geo: FiniteGeometry,
+        split: Sequence,
+        refgeo: FiniteGeometry,
+    ) -> "CMFDCurrentCalculator":
         """
-       creates and returns a new CurrentCalculator which can calculate the
-       current for the refined system.
+        creates and returns a new CurrentCalculator which can calculate the
+        current for the refined system.
 
-       Parameters
-       ----------
-       geo: FiniteGeometry
-        the geometry of the system
-       split: Sequence
-        split data whose structure is determined by the geometry of
-        the system
-       refgeo: FiniteGeometry
-        the refined geometry
+        Parameters
+        ----------
+        geo: FiniteGeometry
+         the geometry of the system
+        split: Sequence
+         split data whose structure is determined by the geometry of
+         the system
+        refgeo: FiniteGeometry
+         the refined geometry
 
-       Returns
-       -------
-       CMFDCurrentCalculator
-        new current calculator compatible with the refined geometry
-       """
+        Returns
+        -------
+        CMFDCurrentCalculator
+         new current calculator compatible with the refined geometry
+        """
 
         df = np.ones_like(geo.array_refine(self.df, split, axis=0))
-        coupling = np.zeros_like(
-            geo.array_refine(self.coupling, split, axis=0))
-        assemblies = geo.array_refine(np.arange(0, stop=geo.cells),
-                                      split).astype(int)
+        coupling = np.zeros_like(geo.array_refine(self.coupling, split, axis=0))
+        assemblies = geo.array_refine(np.arange(0, stop=geo.cells), split).astype(int)
         for cell, neighbors in enumerate(refgeo.neighbors):
             for face, neighbor in enumerate(neighbors):
                 if not isinstance(neighbor, Boundary):
                     if assemblies[cell] != assemblies[neighbor]:
                         df[cell][face] = self.df[assemblies[cell]][face]
                         coupling[cell][face] = self.coupling[assemblies[cell]][face]
-        return self.__class__(geo.array_refine(self.dc, split, axis=0),
-                              self.dim,
-                              coupling, df)
+        return self.__class__(geo.array_refine(self.dc, split, axis=0), self.dim, coupling, df)
 
     @classmethod
-    def from_isotopes(cls, isotopes: IsotopeData, dim: int,
-                      transport: bool = False) -> "CMFDCurrentCalculator":
+    def from_isotopes(cls, isotopes: IsotopeData, dim: int, transport: bool = False) -> "CMFDCurrentCalculator":
         """
         method to construct a CurrentCalculator from a sequence of :class:`CrossSectionData
         <dorban.materials.CrossSectionData>` objects each having a diffusion cross section or a transport cross
@@ -158,12 +164,9 @@ class CMFDCurrentCalculator:
 
 
 @numba.njit()
-def _compute(cell, E, neighbor, D1, D2, l1, l2, df1, df2, surface_area,
-             coupling_coefficient):
-    row_indices = np.hstack((np.arange(cell * E, (cell + 1) * E),
-                             np.arange(cell * E, (cell + 1) * E)))
-    col_indices = np.hstack((np.arange(neighbor * E, (neighbor + 1) * E),
-                             np.arange(cell * E, (cell + 1) * E)))
+def _compute(cell, E, neighbor, D1, D2, l1, l2, df1, df2, surface_area, coupling_coefficient):
+    row_indices = np.hstack((np.arange(cell * E, (cell + 1) * E), np.arange(cell * E, (cell + 1) * E)))
+    col_indices = np.hstack((np.arange(neighbor * E, (neighbor + 1) * E), np.arange(cell * E, (cell + 1) * E)))
     return row_indices, col_indices, _values(D1, D2, l1, l2, df1, df2, surface_area, coupling_coefficient)
 
 

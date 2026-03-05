@@ -2,6 +2,7 @@ r"""
 This module contains the function to construct diffusion operator
 :math:`D\nabla\phi` as a sparse matrix
 """
+
 import numpy as np
 import scipy.sparse as spar
 
@@ -10,8 +11,7 @@ from dorban.geometry.boundary_conditions import Boundary
 from dorban.geometry.geometry import FiniteGeometry
 
 
-def diffusion_matrix(geometry: FiniteGeometry, E: int,
-                     current_calc: CurrentCalculator) -> spar.csr_matrix:
+def diffusion_matrix(geometry: FiniteGeometry, E: int, current_calc: CurrentCalculator) -> spar.csr_matrix:
     r"""
     This function will generate a sparse matrix representing the diffusion
     operator.
@@ -47,14 +47,9 @@ def diffusion_matrix(geometry: FiniteGeometry, E: int,
             adj = geometry.neighbors[cell]
             for j, neighbor in enumerate(adj):
                 if not isinstance(neighbor, Boundary):
-                    yield current_calc.compute_current_coefficients(cell,
-                                                                    neighbor,
-                                                                    j,
-                                                                    geometry)
+                    yield current_calc.compute_current_coefficients(cell, neighbor, j, geometry)
                 else:
-                    yield neighbor.compute_boundary_coefficient(geometry, E,
-                                                                current_calc,
-                                                                cell, j)
+                    yield neighbor.compute_boundary_coefficient(geometry, E, current_calc, cell, j)
 
     row_indices = []
     col_indices = []
@@ -64,5 +59,5 @@ def diffusion_matrix(geometry: FiniteGeometry, E: int,
         col_indices.append(d[1])
         values.append(d[2])
     return spar.coo_matrix(
-        (np.hstack(values), (np.hstack(row_indices), np.hstack(col_indices))),
-        shape=(E * C, E * C)).tocsr()
+        (np.hstack(values), (np.hstack(row_indices), np.hstack(col_indices))), shape=(E * C, E * C)
+    ).tocsr()

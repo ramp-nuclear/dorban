@@ -1,4 +1,3 @@
-import pickle
 from dataclasses import dataclass, field
 from typing import Any, Literal, Optional
 
@@ -44,9 +43,10 @@ class Settings:
      Flag that determines if to run the debug function of the discontinuity factors that checks that they are reasonable.
      If its True and the discontinuity factors are not reasonable an error will be raised. Default to True.
     """
+
     adjoint: bool = False
     initial_flux: Optional[np.array] = field(default=None, repr=False)
-    initial_k: float = 1.
+    initial_k: float = 1.0
     k_tol: float = 1e-5
     flux_rtol: float = 1e-5
     flux_atol: float = 1e-5
@@ -59,10 +59,16 @@ class Settings:
 
     @property
     def kwargs(self):
-        return {"max_iter": self.max_iter, "lin_atol": self.lin_solve_atol,
-                "lin_rtol": self.lin_solve_rtol, "atol_vector": self.flux_atol,
-                "rtol_vector": self.flux_rtol, "tol_value": self.k_tol,
-                "k": self.initial_k, "v": self.initial_flux}
+        return {
+            "max_iter": self.max_iter,
+            "lin_atol": self.lin_solve_atol,
+            "lin_rtol": self.lin_solve_rtol,
+            "atol_vector": self.flux_atol,
+            "rtol_vector": self.flux_rtol,
+            "tol_value": self.k_tol,
+            "k": self.initial_k,
+            "v": self.initial_flux,
+        }
 
 
 @dataclass
@@ -90,5 +96,4 @@ class FDSettings(Settings):
 
     def __post_init__(self):
         if self.split is None:
-            raise ValueError("The split argument must be set (not to None)"
-                             "in FDSettings, but it was None")
+            raise ValueError("The split argument must be set (not to None)in FDSettings, but it was None")

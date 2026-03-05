@@ -2,6 +2,7 @@
 This module contains some utils used in the implementation of the solution of
 the NEM equations
 """
+
 from typing import Sequence
 
 import numba
@@ -57,8 +58,17 @@ def cells_axi_slice(array: np.array, cell: int, axi: Sequence[int]) -> np.array:
 
 
 @numba.njit()
-def compute_coupling_coefficients(current: np.array, flux1: np.array, flux2: np.array, D1: np.array, D2: np.array,
-                                  l1: float, l2: float, dis1: np.array, dis2: np.array) -> np.array:
+def compute_coupling_coefficients(
+    current: np.array,
+    flux1: np.array,
+    flux2: np.array,
+    D1: np.array,
+    D2: np.array,
+    l1: float,
+    l2: float,
+    dis1: np.array,
+    dis2: np.array,
+) -> np.array:
     r"""
     computes the CMFD coupling coefficient :math:`C` between two adjacent cells. Which is defined by:
 
@@ -95,8 +105,9 @@ def compute_coupling_coefficients(current: np.array, flux1: np.array, flux2: np.
      The coupling coefficient.
 
     """
-    return ((2 * D1 * D2 / (D2 * l1 * dis1 + D1 * l2 * dis2)) * (
-            flux2 * dis2 - flux1 * dis1) + current) / (flux2 + flux1)
+    return ((2 * D1 * D2 / (D2 * l1 * dis1 + D1 * l2 * dis2)) * (flux2 * dis2 - flux1 * dis1) + current) / (
+        flux2 + flux1
+    )
 
 
 @numba.njit()
@@ -126,7 +137,7 @@ def boundary_coupling_coefficient(current: np.array, flux: np.array, boundary_co
 
 
 @numba.njit()
-def current_from_poly_exp(E: int, poly_exp: np.array, D: np.array, l: float, face: int) -> np.array:
+def current_from_poly_exp(E: int, poly_exp: np.array, D: np.array, ll: float, face: int) -> np.array:
     r"""
     computes the current at a boundary of a cell from the coefficients of the degree 4 polynomial used to represent the
     flux inside the cell. The current is computed using Fick's law
@@ -143,7 +154,7 @@ def current_from_poly_exp(E: int, poly_exp: np.array, D: np.array, l: float, fac
      An array of shape 4E which contains the coefficients which represents the flux in the basis used by NEM.
     D: np.array
      The diffusion coefficient of the cell.
-    l: float
+    ll: float
      The width of the cell.
     face: int
      The number of the face on which the current is computed.
@@ -154,8 +165,15 @@ def current_from_poly_exp(E: int, poly_exp: np.array, D: np.array, l: float, fac
      The current at the wanted face.
     """
     direction = 2 * (face % 2) - 1
-    return -D / l * (3 * poly_exp[:E] + poly_exp[E:2 * E] / 5
-                     + direction * (poly_exp[2 * E:3 * E] + poly_exp[3 * E:4 * E] / 2))
+    return (
+        -D
+        / ll
+        * (
+            3 * poly_exp[:E]
+            + poly_exp[E : 2 * E] / 5
+            + direction * (poly_exp[2 * E : 3 * E] + poly_exp[3 * E : 4 * E] / 2)
+        )
+    )
 
 
 @numba.njit()
@@ -207,5 +225,3 @@ def cell_indices_in_two_cell_system(E: int) -> np.array:
     np.array
     """
     return np.hstack((np.arange(2 * E), np.arange(4 * E, 6 * E)))
-
-

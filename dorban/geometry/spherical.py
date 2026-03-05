@@ -3,7 +3,8 @@ Contains the Spherical Geometry class, which can be used to model spherical
 system for example the Godiva and Jezebel experiments. This geometry can't be
 used to model a real reactor but can be used for toy models.
 """
-from typing import List, Sequence
+
+from typing import Sequence
 
 import numpy as np
 from more_itertools import pairwise
@@ -37,23 +38,21 @@ class Spherical(FiniteGeometry):
 
     """
 
-    def __init__(self, lengths: np.array,
-                 boundary_condition: Boundary,
-                 dim: int):
+    def __init__(self, lengths: np.array, boundary_condition: Boundary, dim: int):
         self.dim = dim
         self.lengths = lengths
         self.boundary_conditions = boundary_condition
         self.cells = len(lengths)
-        self.volume_constant = np.power(np.pi, self.dim / 2) / gamma(
-            self.dim / 2 + 1)
-        self.surface_area_constant = 2 * np.power(np.pi, self.dim / 2) / gamma(
-            self.dim / 2)
+        self.volume_constant = np.power(np.pi, self.dim / 2) / gamma(self.dim / 2 + 1)
+        self.surface_area_constant = 2 * np.power(np.pi, self.dim / 2) / gamma(self.dim / 2)
         self.neighbors = self.neighbors_calc()
         self.radii = np.hstack([[0], np.cumsum(self.lengths)])
         self.volumes = np.array(
-            [self.volume_constant * (
-                        np.power(r1, self.dim) - np.power(r0, self.dim))
-             for r0, r1 in pairwise(self.radii)])
+            [
+                self.volume_constant * (np.power(r1, self.dim) - np.power(r0, self.dim))
+                for r0, r1 in pairwise(self.radii)
+            ]
+        )
 
     def direction(self, face: int) -> np.array:
         """
@@ -84,9 +83,7 @@ class Spherical(FiniteGeometry):
          List of lists, the list at index `i` are the neighbors of the cell
          numbered `i`.
         """
-        return ([[1]]
-                + [[x - 1, x + 1] for x in range(1, self.cells - 1)]
-                + [[self.cells - 2, self.boundary_conditions]])
+        return [[1]] + [[x - 1, x + 1] for x in range(1, self.cells - 1)] + [[self.cells - 2, self.boundary_conditions]]
 
     def surface_area(self, cell: int, face: int) -> float:
         """
@@ -101,8 +98,8 @@ class Spherical(FiniteGeometry):
          The face number
         """
         return self.surface_area_constant * np.power(
-            self.lengths[0] if cell == 0 else self.radii[cell + face],
-            self.dim - 1)
+            self.lengths[0] if cell == 0 else self.radii[cell + face], self.dim - 1
+        )
 
     def distance_to_face(self, cell: int, face: int) -> float:
         """
@@ -139,8 +136,7 @@ class Spherical(FiniteGeometry):
         """
         return face - (2 * (face % 2) - 1)
 
-    def array_refine(self, array: np.array,
-                     split: np.array, **kwargs) -> np.array:
+    def array_refine(self, array: np.array, split: np.array, **kwargs) -> np.array:
         """
         Refines an array according to the split parameters. For example this
         function is used in order to refine an array of densities of some
@@ -178,8 +174,7 @@ class Spherical(FiniteGeometry):
         Spherical
          new Geometry with a refined mesh
         """
-        return Spherical(self.array_refine(self.lengths / split, split),
-                         self.boundary_conditions, self.dim)
+        return Spherical(self.array_refine(self.lengths / split, split), self.boundary_conditions, self.dim)
 
     def uniform_split(self, subcells: int) -> Sequence[np.array]:
         """
