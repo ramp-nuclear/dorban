@@ -31,4 +31,3 @@ Category 2-benchmarks:
         4. HTGR benchmark
     GET tests:
         5. 1 dim GET benchmark from K.Smiths paper
-        6. 2 dim GET becnhmark with coefficent calculated using openmc
