@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dorban"
+authors = [
+    {name = "Nuclear RAMP team", email = "nuclear.ramp.dev@gmail.com"},
+]
+description = "A neutron diffusion solver with finite difference and nodal implementations"
+dynamic = ["version"]
+requires-python = ">=3.11"
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "slepc4py",
+    "petsc4py",
+    "matplotlib",
+    "numba",
+    "multipledispatch",
+    "more-itertools",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-regressions",
+    "hypothesis",
+    "jupyter",
+    "openmc",
+    "testbook",
+]
+
+[tool.setuptools.packages.find]
+include = ['dorban*']
+exclude = ['tests*']
+
+[tool.setuptools_scm]
