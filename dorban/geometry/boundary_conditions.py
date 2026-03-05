@@ -6,7 +6,8 @@ from abc import ABCMeta, abstractmethod
 from typing import Sequence, Tuple
 
 import numpy as np
-from dorbam.geometry import FiniteGeometry
+
+from dorban.geometry import FiniteGeometry
 
 
 class Boundary(metaclass=ABCMeta):
