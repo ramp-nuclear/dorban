@@ -1,6 +1,7 @@
 """
 tests for the various eigensolvers
 """
+
 import numpy as np
 from scipy.sparse import csr_matrix
 
@@ -10,8 +11,8 @@ from dorban.eigenvalue_solvers.slepc_methods import generalized_eigenvalue_slepc
 
 
 def test_generalized_eigenvalue():
-    A = np.diag([1., 3., 53., 59.,1.,1.,1.,1.,1.])
-    M = np.diag([7., 6., 4., 12.,1.,1.,1.,1.,1.])
+    A = np.diag([1.0, 3.0, 53.0, 59.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+    M = np.diag([7.0, 6.0, 4.0, 12.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     k, v = generalized_eigenvalue(A, M, rtol_vector=1e-5, atol_vector=1e-10)
     k1, v1 = generalized_arnoldi(A, M)
     k2, v2 = generalized_eigenvalue_slepc(csr_matrix(A), csr_matrix(M))
@@ -22,4 +23,4 @@ def test_generalized_eigenvalue():
     assert np.isclose(k1.real, 13.25)
     assert np.isclose(k2, 13.25)
     assert np.allclose(v1, v)
-    assert np.allclose(v2,v)
+    assert np.allclose(v2, v)

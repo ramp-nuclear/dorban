@@ -21,20 +21,21 @@ advanced numerical linear algebraic algorithms.
 
 
 """
+
 from numba.np.unsafe.ndarray import *
 
 from dorban.finite_differences.finite_difference_current_calculator import (
-    CurrentCalculatorFD,
-    DiscontinuityCurrentCalculator,
+    CurrentCalculatorFD as CurrentCalculatorFD,
+    DiscontinuityCurrentCalculator as DiscontinuityCurrentCalculator,
 )
 from dorban.geometry import (
-    Boundary,
-    Cartesian,
-    FiniteGeometry,
-    Reflector,
-    TriangularTessellation,
-    Void,
+    Boundary as Boundary,
+    Cartesian as Cartesian,
+    FiniteGeometry as FiniteGeometry,
+    Reflector as Reflector,
+    TriangularTessellation as TriangularTessellation,
+    Void as Void,
 )
-from dorban.materials import Fissionable, Isotope
-from dorban.solve_equation import solve_k
-from dorban.system import Core, mesh_refinement
+from dorban.materials import Fissionable as Fissionable, Isotope as Isotope
+from dorban.solve_equation import solve_k as solve_k
+from dorban.system import Core as Core, mesh_refinement as mesh_refinement

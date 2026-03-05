@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import Tuple
 
 import numpy as np
 import petsc4py.PETSc as petsc
@@ -6,15 +6,18 @@ import scipy.sparse as sparse
 import slepc4py.SLEPc as slepc
 
 
-def generalized_eigenvalue_slepc(A: sparse.csr_matrix,
-                                 M: sparse.csr_matrix,
-                                 v: np.array = None,
-                                 rtol_vector: float = 1e-10,
-                                 lin_rtol=1e-12,
-                                 max_iter=np.inf, solver_name="jd",
-                                 lin_solver_name="bcgsl", pc_name=None,
-                                 **kwargs) -> \
-        Tuple[float, np.array]:
+def generalized_eigenvalue_slepc(
+    A: sparse.csr_matrix,
+    M: sparse.csr_matrix,
+    v: np.array = None,
+    rtol_vector: float = 1e-10,
+    lin_rtol=1e-12,
+    max_iter=np.inf,
+    solver_name="jd",
+    lin_solver_name="bcgsl",
+    pc_name=None,
+    **kwargs,
+) -> Tuple[float, np.array]:
     r"""
     interface to use SLEPc solvers for the eigenvalue problem Av=kMv
 
@@ -85,12 +88,10 @@ def scipy_to_petcs(A: sparse.spmatrix):
     """
     if A.format != "csr":
         A = A.tocsr()
-    return petsc.Mat().createAIJ(size=A.shape, ** {
-               A.format: (A.indptr, A.indices, A.data)})
+    return petsc.Mat().createAIJ(size=A.shape, **{A.format: (A.indptr, A.indices, A.data)})
 
 
-def solve_linear_petsc(A: sparse.spmatrix, b: np.array, atol=1e-14, rtol=1e-12,
-                       solver_type="bcgsl", guess=None):
+def solve_linear_petsc(A: sparse.spmatrix, b: np.array, atol=1e-14, rtol=1e-12, solver_type="bcgsl", guess=None):
     sA = scipy_to_petcs(A)
     ksp = petsc.KSP().create()
     ksp.setOperators(sA, sA)
@@ -114,12 +115,11 @@ def solve_linear_petsc(A: sparse.spmatrix, b: np.array, atol=1e-14, rtol=1e-12,
 
 def test_scipy_to_petsc():
     mat = sparse.csr_matrix(np.ones((10, 10)))
-    t = scipy_to_petcs(mat)
+    scipy_to_petcs(mat)
 
 
 def test_solver():
     mat1 = sparse.csr_matrix(np.diag(np.arange(1, 11)))
     mat2 = sparse.csr_matrix(np.diag(np.arange(101, 111)))
-    t = generalized_eigenvalue_slepc(mat1, mat2)
-    x = solve_linear_petsc(mat1, np.ones(10), guess=np.ones(10))
-    print(x)
+    generalized_eigenvalue_slepc(mat1, mat2)
+    solve_linear_petsc(mat1, np.ones(10), guess=np.ones(10))

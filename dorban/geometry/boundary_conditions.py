@@ -1,11 +1,13 @@
 """
 This module contains classes representing different boundary conditions
 """
+
 from abc import ABCMeta, abstractmethod
-from enum import Enum
 from typing import Sequence, Tuple
 
 import numpy as np
+
+from dorban.geometry.geometry import FiniteGeometry
 
 
 class Boundary(metaclass=ABCMeta):
@@ -17,9 +19,9 @@ class Boundary(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def compute_boundary_coefficient(self, geometry, E, current_calc,
-                                     cell: int, face: int) -> \
-            Tuple[np.array, np.array, np.array]:
+    def compute_boundary_coefficient(
+        self, geometry, E, current_calc, cell: int, face: int
+    ) -> Tuple[np.array, np.array, np.array]:
         """
         computes the coefficients of the diffusion matrix that represent
         the current between a cell in the boundary.
@@ -44,7 +46,7 @@ class Boundary(metaclass=ABCMeta):
             appear, the column indices in the diffusion matrix in which the coefficents
             appear, the values of the diffusion matrix
         """
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class Reflector(Boundary):
@@ -56,9 +58,9 @@ class Reflector(Boundary):
     def __init__(self):
         super().__init__()
 
-    def compute_boundary_coefficient(self, geometry, E, current_calc,
-                                     cell: int, face: int) -> \
-            Tuple[np.array, np.array, np.array]:
+    def compute_boundary_coefficient(
+        self, geometry, E, current_calc, cell: int, face: int
+    ) -> Tuple[np.array, np.array, np.array]:
         return np.zeros(0), np.zeros(0), np.zeros(0)
 
 
@@ -67,17 +69,20 @@ class ExtrapolationLength(Boundary):
     class representing void boundary condition using the extrapolated length
     approximation with the 0.4692 constant :math:`J=-0.4692\phi`
     """
+
     constant = 0.4692
 
     def __init__(self):
         super().__init__()
 
-    def compute_boundary_coefficient(self, geometry, E, current_calc,
-                                     cell: int, face: int) -> \
-            Tuple[np.array, np.array, np.array]:
-        return np.arange(cell * E, (cell + 1) * E), np.arange(
-            cell * E, (cell + 1) * E), \
-               np.full(E, self.constant * geometry.surface_area(cell, face))
+    def compute_boundary_coefficient(
+        self, geometry, E, current_calc, cell: int, face: int
+    ) -> Tuple[np.array, np.array, np.array]:
+        return (
+            np.arange(cell * E, (cell + 1) * E),
+            np.arange(cell * E, (cell + 1) * E),
+            np.full(E, self.constant * geometry.surface_area(cell, face)),
+        )
 
 
 class Void(Boundary):
@@ -89,12 +94,14 @@ class Void(Boundary):
     def __init__(self):
         super().__init__()
 
-    def compute_boundary_coefficient(self, geometry, E, current_calc,
-                                     cell: int, face: int) -> \
-            Tuple[np.array, np.array, np.array]:
-        return np.arange(cell * E, (cell + 1) * E), np.arange(
-            cell * E, (cell + 1) * E), \
-               np.full(E, 0.5 * geometry.surface_area(cell, face))
+    def compute_boundary_coefficient(
+        self, geometry, E, current_calc, cell: int, face: int
+    ) -> Tuple[np.array, np.array, np.array]:
+        return (
+            np.arange(cell * E, (cell + 1) * E),
+            np.arange(cell * E, (cell + 1) * E),
+            np.full(E, 0.5 * geometry.surface_area(cell, face)),
+        )
 
 
 class ZeroFlux(Boundary):
@@ -109,14 +116,16 @@ class ZeroFlux(Boundary):
     def __init__(self):
         super().__init__()
 
-    def compute_boundary_coefficient(self, geometry, E, current_calc,
-                                     cell: int, face: int) -> \
-            Tuple[np.array, np.array, np.array]:
+    def compute_boundary_coefficient(
+        self, geometry, E, current_calc, cell: int, face: int
+    ) -> Tuple[np.array, np.array, np.array]:
         s = geometry.surface_area(cell, face)
         distance = geometry.distance_to_face(cell, face)
-        return np.arange(cell * E, (cell + 1) * E), np.arange(
-            cell * E, (cell + 1) * E), \
-               np.full(E, s * current_calc.dc[cell] / distance)
+        return (
+            np.arange(cell * E, (cell + 1) * E),
+            np.arange(cell * E, (cell + 1) * E),
+            np.full(E, s * current_calc.dc[cell] / distance),
+        )
 
 
 class BluePortal(Boundary):
@@ -133,8 +142,7 @@ class BluePortal(Boundary):
     def __init__(self):
         super().__init__()
 
-    def compute_boundary_coefficient(self, geometry, E, current_calc,
-                                     cell: int, face: int) -> float:
+    def compute_boundary_coefficient(self, geometry, E, current_calc, cell: int, face: int) -> float:
         pass
 
 
@@ -152,8 +160,7 @@ class OrangePortal(Boundary):
     def __init__(self):
         super().__init__()
 
-    def compute_boundary_coefficient(self, geometry, E, current_calc,
-                                     cell: int, face: int) -> float:
+    def compute_boundary_coefficient(self, geometry, E, current_calc, cell: int, face: int) -> float:
         pass
 
 
@@ -176,14 +183,13 @@ class CurrentCondition(Boundary):
         super(CurrentCondition, self).__init__()
         self.current = current
 
-    def compute_boundary_coefficient(self, geometry, E, current_calc,
-                                     cell: int, face: int) -> \
-            Tuple[np.array, np.array, np.array]:
+    def compute_boundary_coefficient(
+        self, geometry, E, current_calc, cell: int, face: int
+    ) -> Tuple[np.array, np.array, np.array]:
         return np.zeros(0), np.zeros(0), np.zeros(0)
 
     @abstractmethod
-    def boundary_current(self, E: int, cell: int, surface_area: float) -> \
-            Tuple[np.array, np.array]:
+    def boundary_current(self, E: int, cell: int, surface_area: float) -> Tuple[np.array, np.array]:
         r"""
         gives the indices and the values in the current vector :math:`J=-D \nabla \phi`
         to which this boundary contributes.
@@ -215,8 +221,7 @@ class KnownCurrent(CurrentCondition):
     current on the boundary
     """
 
-    def boundary_current(self, E: int, cell: int, surface_area: float) -> \
-            Tuple[np.array, np.array]:
+    def boundary_current(self, E: int, cell: int, surface_area: float) -> Tuple[np.array, np.array]:
         return np.arange(cell * E, (cell + 1) * E), surface_area * self.current
 
 
@@ -226,21 +231,20 @@ class IncomingCurrent(CurrentCondition):
     is outside of the system
     """
 
-    def compute_boundary_coefficient(self, geometry, E, current_calc,
-                                     cell: int, face: int) -> \
-            Tuple[np.array, np.array, np.array]:
-        return np.arange(cell * E, (cell + 1) * E), np.arange(
-            cell * E, (cell + 1) * E), \
-               np.full(E, 0.5 * geometry.surface_area(cell, face))
+    def compute_boundary_coefficient(
+        self, geometry, E, current_calc, cell: int, face: int
+    ) -> Tuple[np.array, np.array, np.array]:
+        return (
+            np.arange(cell * E, (cell + 1) * E),
+            np.arange(cell * E, (cell + 1) * E),
+            np.full(E, 0.5 * geometry.surface_area(cell, face)),
+        )
 
-    def boundary_current(self, E: int, cell: int, surface_area: float) -> \
-            Tuple[np.array, np.array]:
-        return np.arange(cell * E,
-                         (cell + 1) * E), -2 * surface_area * self.current
+    def boundary_current(self, E: int, cell: int, surface_area: float) -> Tuple[np.array, np.array]:
+        return np.arange(cell * E, (cell + 1) * E), -2 * surface_area * self.current
 
 
-def glue_orange_blue(geometry: "FintieGeometry", orange_indices: Sequence[int],
-                     blue_indices: Sequence[int]):
+def glue_orange_blue(geometry: "FiniteGeometry", orange_indices: Sequence[int], blue_indices: Sequence[int]):
     r"""
     Function that glues the :class:`OrangePortal <dorban.geometry.boundary_conditions.OrangePortal>`
     with the :class:`OrangePortal <dorban.geometry.boundary_conditions.BluePortal>`.
@@ -263,12 +267,8 @@ def glue_orange_blue(geometry: "FintieGeometry", orange_indices: Sequence[int],
      A sequence of the indices of cells with BluePortal boundary condition.
 
     """
-    neighbors=geometry.neighbors
+    neighbors = geometry.neighbors
     for index, cell in enumerate(blue_indices):
         neighbor = orange_indices[index]
-        neighbors[cell] = [
-            n if not isinstance(n, BluePortal) else neighbor
-            for n in neighbors[cell]]
-        neighbors[neighbor] = [
-            n if not isinstance(n, OrangePortal) else cell for n in
-            neighbors[neighbor]]
+        neighbors[cell] = [n if not isinstance(n, BluePortal) else neighbor for n in neighbors[cell]]
+        neighbors[neighbor] = [n if not isinstance(n, OrangePortal) else cell for n in neighbors[neighbor]]

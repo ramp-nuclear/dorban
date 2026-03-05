@@ -1,25 +1,25 @@
 """
 This module contains the solver of the equation.
 """
-from typing import Callable, Tuple
+
+from typing import Callable
 
 import numpy as np
 import scipy.sparse.linalg as la
 
 import dorban.finite_differences.fd_cross_sections_operators as fd
-from dorban.nem.solve_nem import NEMSettings, solve_k_nem
 from dorban.eigenvalue_solvers.arnoldi_arpack import generalized_arnoldi
 from dorban.eigenvalue_solvers.power_iteration import generalized_eigenvalue
 from dorban.eigenvalue_solvers.slepc_methods import generalized_eigenvalue_slepc
 from dorban.finite_differences.diffusion_operator import diffusion_matrix
 from dorban.finite_differences.solve_finite_difference import solve_k_fd
+from dorban.nem.solve_nem import NEMSettings, solve_k_nem
 from dorban.rdfs.debug_df import debug_discontinuity_factors
 from dorban.settings import FDSettings, Settings
 from dorban.system import Core
 
 
-def fixed_source(system: Core, source: np.array, solver: Callable = la.lgmres,
-                 **kwargs) -> np.array:
+def fixed_source(system: Core, source: np.array, solver: Callable = la.lgmres, **kwargs) -> np.array:
     r"""
     This function solves the fixed source equations
 
@@ -45,14 +45,11 @@ def fixed_source(system: Core, source: np.array, solver: Callable = la.lgmres,
         array that represents the flux at the system created by the source
     """
     fission = fd.cmfd_fission(system)
-    absorber = diffusion_matrix(system.geometry, system.E,
-                                system.current_calc) + fd.cmfd_absorption(
-        system)
+    absorber = diffusion_matrix(system.geometry, system.E, system.current_calc) + fd.cmfd_absorption(system)
     return solver(absorber - fission, source.flatten(), **kwargs)
 
 
-def flux_with_given_boundary_current(system: Core, k: float,
-                                     **kwargs) -> np.array:
+def flux_with_given_boundary_current(system: Core, k: float, **kwargs) -> np.array:
     """
     computes the flux that gives a known current on the boundary and a given
     multiplication eigenvalue
@@ -72,9 +69,7 @@ def flux_with_given_boundary_current(system: Core, k: float,
     array that represents the flux
     """
     fission = 1 / k * fd.cmfd_fission(system)
-    absorber = (diffusion_matrix(system.geometry, system.E,
-                                 system.current_calc)
-                + fd.cmfd_absorption(system))
+    absorber = diffusion_matrix(system.geometry, system.E, system.current_calc) + fd.cmfd_absorption(system)
     current = fd.boundary_current(system.geometry, system.E)
     flux = la.bicgstab(absorber - fission, current, **kwargs)[0]
     assert np.all(flux > 0), f"The flux wasn't strictly positive! {flux}"
@@ -93,14 +88,11 @@ def _call_solver(core: Core, settings: Settings) -> tuple[float, np.array]:
     elif settings.solver_name == "slepc":
         solver = generalized_eigenvalue_slepc
     else:
-        raise ValueError(
-            f"there is no eigenvsolver with the name {settings.solver_name}")
+        raise ValueError(f"there is no eigenvsolver with the name {settings.solver_name}")
     if isinstance(settings, FDSettings):
         return solve_k_fd(core, settings, solver)
     else:
-        raise NotImplementedError(
-            "The given settings have no solution implementation "
-            "as of yet")
+        raise NotImplementedError("The given settings have no solution implementation as of yet")
 
 
 def _normalize_to_neutron_source(core: Core, k: float, flux: np.array) -> np.array:
@@ -123,7 +115,8 @@ def _normalize_to_neutron_source(core: Core, k: float, flux: np.array) -> np.arr
      The normalized flux
     """
     nufission_rate = np.dot(
-        np.hstack([core.geometry.volumes[cell] * iso.nusigmaf for cell, iso in enumerate(core.isotopes)]), flux)
+        np.hstack([core.geometry.volumes[cell] * iso.nusigmaf for cell, iso in enumerate(core.isotopes)]), flux
+    )
     return flux * k / nufission_rate
 
 
@@ -149,6 +142,7 @@ def solve_k(core: Core, settings: Settings) -> tuple[float, np.array]:
         if bad_indices:
             cell, face, neighbor = bad_indices[0]
             raise ValueError(
-                f"There is a problem with the discontinuity factors between cell number {cell} and cell number {neighbor} across face number {face}.")
+                f"There is a problem with the discontinuity factors between cell number {cell} and cell number {neighbor} across face number {face}."
+            )
     k, flux = _call_solver(core, settings)
     return k, _normalize_to_neutron_source(core, k, flux)

@@ -1,6 +1,7 @@
 """
 Contains the Cartesian Geometry class
 """
+
 from bisect import bisect_right
 from typing import List, Optional, Sequence, Tuple, Union
 
@@ -22,7 +23,7 @@ def _neighbors_calc(x, y, z, cells, boundary, dim) -> list[list[int]]:
     """
     neigh = []
     for cell in range(cells):
-        cor = tuple(np.unravel_index(cell, (x, y, z), order='F'))
+        cor = tuple(np.unravel_index(cell, (x, y, z), order="F"))
         neigh.append(_calc(x, y, z, boundary, dim, cor, cell))
     return neigh
 
@@ -118,9 +119,12 @@ class Cartesian(FiniteGeometry):
     :class:`PolyBox <dorban.geometry.polybox.PolyBox>`
     """
 
-    def __init__(self, lengths: Sequence[np.array],
-                 boundary_condition: Sequence[Boundary],
-                 black_absorber: Optional[Sequence[int]] = None):
+    def __init__(
+        self,
+        lengths: Sequence[np.array],
+        boundary_condition: Sequence[Boundary],
+        black_absorber: Optional[Sequence[int]] = None,
+    ):
         self.dim = len(lengths)
         self.lengths = lengths
         self.boundary_conditions = boundary_condition
@@ -129,12 +133,10 @@ class Cartesian(FiniteGeometry):
         self.y = 1 if self.dim <= 1 else len(lengths[1])
         self.z = 1 if self.dim <= 2 else len(lengths[2])
         self.cells = self.x * self.y * self.z - len(self.black_absorber)
-        self.nonblack = np.delete(np.arange(self.x * self.y * self.z),
-                                  self.black_absorber)
+        self.nonblack = np.delete(np.arange(self.x * self.y * self.z), self.black_absorber)
         self.boundary = list(filter(self._on_boundary, range(self.cells)))
         self.neighbors = self._neighbors_calc()
-        self.volumes = np.array(
-            [self._volume(cell) for cell in range(self.cells)])
+        self.volumes = np.array([self._volume(cell) for cell in range(self.cells)])
 
     def direction(self, face: int) -> np.array:
         """
@@ -191,8 +193,7 @@ class Cartesian(FiniteGeometry):
         """
         return self.nonblack[cell]
 
-    def _reindex_black_absorber(self, cells: Sequence[int]
-                                ) -> Sequence[Union[int, Void]]:
+    def _reindex_black_absorber(self, cells: Sequence[int]) -> Sequence[Union[int, Void]]:
         r"""
         the function returns a new tuple which uses the numbering that
         skips the black absorbers and which puts Void boundary condition
@@ -210,9 +211,7 @@ class Cartesian(FiniteGeometry):
          black absorber replaced with a
          :class:`Void <dorban.geometry.boundary_conditions.Void>` boundary condition
         """
-        return tuple(
-            self._reindex(cell) if cell in self.nonblack else Void()
-            for cell in cells)
+        return tuple(self._reindex(cell) if cell in self.nonblack else Void() for cell in cells)
 
     def _on_boundary(self, n: int) -> bool:
         """
@@ -229,9 +228,7 @@ class Cartesian(FiniteGeometry):
          Whether the cell is on the boundary.
         """
         cor = np.array(self._coordinates(n))
-        return (0 in cor
-                or -1 in cor[:self.dim] - np.array([self.x, self.y, self.z])[
-                                          :self.dim])
+        return 0 in cor or -1 in cor[: self.dim] - np.array([self.x, self.y, self.z])[: self.dim]
 
     def _neighbors_calc(self) -> Sequence[Sequence[int]]:
         """
@@ -251,15 +248,14 @@ class Cartesian(FiniteGeometry):
             for cell in range(cells):
                 n = self._inverse_reindex(cell)
                 right, left = n + 1, n - 1
-                forward, back, = n + x, n - x
+                forward, back = n + x, n - x
                 up, down = n + x * y, n - x * y
                 neighbors = (left, right, back, forward, down, up)
                 cor: Tuple[int, int, int] = self._coordinates(cell)
-                left, right, back, forward, down, up = \
-                    self._reindex_black_absorber(neighbors)
+                left, right, back, forward, down, up = self._reindex_black_absorber(neighbors)
                 neighbors = (left, right, back, forward, down, up)
                 if cell not in self.boundary:
-                    neigh.append(neighbors[:2 * self.dim])
+                    neigh.append(neighbors[: 2 * self.dim])
                 else:
                     if self.dim == 3:
                         if cor[2] == 0:
@@ -276,8 +272,7 @@ class Cartesian(FiniteGeometry):
                             left = self.boundary_conditions[0]
                         if cor[0] == x - 1:
                             right = self.boundary_conditions[1]
-                    neigh.append(
-                        (left, right, back, forward, down, up)[:2 * self.dim])
+                    neigh.append((left, right, back, forward, down, up)[: 2 * self.dim])
         else:
             neighbors = _neighbors_calc(self.x, self.y, self.z, self.cells, np.array(self.boundary), self.dim)
             neigh = []
@@ -299,8 +294,7 @@ class Cartesian(FiniteGeometry):
         Tuple[int, int, int]
          (x,y,z) x,y,z being the coordinates of the cell
         """
-        return tuple(np.unravel_index(self._inverse_reindex(cell),
-                                      (self.x, self.y, self.z), order='F'))
+        return tuple(np.unravel_index(self._inverse_reindex(cell), (self.x, self.y, self.z), order="F"))
 
     def _lengths_cell(self, cell: int) -> Sequence[float]:
         """
@@ -389,14 +383,11 @@ class Cartesian(FiniteGeometry):
         :math:`self.x\cdot self.y\cdot self.z` which has zeros where there is black
         absorber
         """
-        new_array = np.zeros(
-            tuple([self.x * self.y * self.z] + list(array.shape)[1:]))
+        new_array = np.zeros(tuple([self.x * self.y * self.z] + list(array.shape)[1:]))
         new_array[self.nonblack] = array
         return new_array
 
-    def array_refine_with_black_absorber(self, array: np.array,
-                                         split: List[Sequence[int]]
-                                         ) -> np.array:
+    def array_refine_with_black_absorber(self, array: np.array, split: List[Sequence[int]]) -> np.array:
         r"""
         function to refine an array that contains data also about the cells
         that contain black absorber, the length of the array should be
@@ -418,11 +409,9 @@ class Cartesian(FiniteGeometry):
          new array containing the same information but is suitable to the
          refined geometry
         """
-        return _refine_cube(self.x, self.y, self.z, self.dim,
-                            array, split)
+        return _refine_cube(self.x, self.y, self.z, self.dim, array, split)
 
-    def array_refine(self, array: np.array,
-                     split: List[Sequence[int]], **kwargs) -> np.array:
+    def array_refine(self, array: np.array, split: List[Sequence[int]], **kwargs) -> np.array:
         """
         refines an array according to the split parameters. For example this
         function is used in order to refine an array of densities of some
@@ -445,12 +434,10 @@ class Cartesian(FiniteGeometry):
          refined geometry
         """
         array = self._zero_where_black(array)
-        refined_with_black = self.array_refine_with_black_absorber(array,
-                                                                   split)
+        refined_with_black = self.array_refine_with_black_absorber(array, split)
         non_black_refined_indices = self.array_refine_with_black_absorber(
-            np.array(
-                [i in self.nonblack for i in range(self.x * self.y * self.z)]),
-            split)
+            np.array([i in self.nonblack for i in range(self.x * self.y * self.z)]), split
+        )
         return refined_with_black[non_black_refined_indices]
 
     def refine_mesh(self, split: List[Sequence[int]]) -> "Cartesian":
@@ -472,13 +459,10 @@ class Cartesian(FiniteGeometry):
          new Geometry with a refined mesh
         """
         black_absorber_refined = self.array_refine_with_black_absorber(
-            np.array([i in self.black_absorber for i
-                      in range(self.x * self.y * self.z)]), split)
-        black_absorber = list(
-            i for i, x in enumerate(black_absorber_refined) if x)
-        lengths = tuple(
-            map(lambda i: np.repeat(self.lengths[i] / split[i],
-                                    split[i]), range(self.dim)))
+            np.array([i in self.black_absorber for i in range(self.x * self.y * self.z)]), split
+        )
+        black_absorber = list(i for i, x in enumerate(black_absorber_refined) if x)
+        lengths = tuple(map(lambda i: np.repeat(self.lengths[i] / split[i], split[i]), range(self.dim)))
         return Cartesian(lengths, self.boundary_conditions, black_absorber)
 
     def uniform_split(self, subcells: int) -> Sequence[np.array]:
@@ -498,7 +482,7 @@ class Cartesian(FiniteGeometry):
         Sequence[np.array]
          Split data to be used with the Cartesian geometry.
         """
-        return _uniform_split(subcells, (self.x, self.y, self.z)[:self.dim])
+        return _uniform_split(subcells, (self.x, self.y, self.z)[: self.dim])
 
     def to_polybox(self) -> PolyBox:
         """
@@ -510,8 +494,9 @@ class Cartesian(FiniteGeometry):
         -------
         PolyBox
         """
-        lengths = [[2 * self.distance_to_face(cell, 2 * face) for face in
-                    range(self.dim)] for cell in range(self.cells)]
+        lengths = [
+            [2 * self.distance_to_face(cell, 2 * face) for face in range(self.dim)] for cell in range(self.cells)
+        ]
         return PolyBox(self.dim, self.neighbors, lengths)
 
 
@@ -550,9 +535,7 @@ def _direction(dim: int, face: int) -> np.array:
     return d
 
 
-def _refine_cube(x: int, y: int, z: int, dim: int, array: np.array,
-                 split: List[Sequence[int]]
-                 ) -> np.array:
+def _refine_cube(x: int, y: int, z: int, dim: int, array: np.array, split: List[Sequence[int]]) -> np.array:
     """
     Function used to refine an array along a full cube.
 
@@ -621,10 +604,8 @@ def _refine_cube(x: int, y: int, z: int, dim: int, array: np.array,
            23, 22, 22, 23, 23])
     """
     split = split + ([1] * (3 - dim))
-    cube = np.reshape(array, tuple(
-        [x, y, z][:dim] + list(array.shape)[1:]), order="F")
+    cube = np.reshape(array, tuple([x, y, z][:dim] + list(array.shape)[1:]), order="F")
     for i in range(dim):
         cube = np.repeat(cube, split[i], axis=i)
-    reshaped = np.reshape(cube, tuple([np.prod(
-        [np.sum(s) for s in split])] + list(array.shape)[1:]), order="F")
+    reshaped = np.reshape(cube, tuple([np.prod([np.sum(s) for s in split])] + list(array.shape)[1:]), order="F")
     return reshaped

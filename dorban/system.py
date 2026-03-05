@@ -8,6 +8,7 @@ A Core is made out of isotopes, energy groups geometry and a current calculator.
  - The geometry is a :class:`FiniteGeometry <dorban.geometry.geometry.FiniteGeometry>` object
  - The current calculator is a :class:`CurrentCalculator <dorban.current_calculator.CurrentCalculator>` object
 """
+
 from dataclasses import dataclass
 from typing import Sequence, Union
 
@@ -36,6 +37,7 @@ class Core:
         Object that allows to compute the current between any 2
         adjacent cells in the system
     """
+
     isotopes: IsotopeData
     E: Union[int, Sequence]
     geometry: FiniteGeometry
@@ -53,7 +55,8 @@ class Core:
                 raise ValueError(
                     f"The material {mat.name} has {mat.E} energy groups "
                     f"which doens't equal to {self.E}, "
-                    f"the core's number of energy groups")
+                    f"the core's number of energy groups"
+                )
 
 
 def mesh_refinement(system: Core, split: Sequence) -> Core:
@@ -82,5 +85,3 @@ def mesh_refinement(system: Core, split: Sequence) -> Core:
     assemblies = geo.array_refine(np.arange(geo.cells), split).astype(int)
     isotopes = [system.isotopes[assembly] for assembly in assemblies]
     return Core(isotopes, system.energy_range, geometry, current_calc)
-
-

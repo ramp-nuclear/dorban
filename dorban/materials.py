@@ -31,8 +31,7 @@ class CrossSectionData:
     :func:`Isotope <dorban.materials.Isotope>` functions.
     """
 
-    def __init__(self, name: str, data: np.array,
-                 special_cross_sections: Dict[str, int]):
+    def __init__(self, name: str, data: np.array, special_cross_sections: Dict[str, int]):
         """
 
         Parameters
@@ -63,11 +62,12 @@ class CrossSectionData:
         from the :math:`j` group to the :math:`i` group.
         Notice that the values on the diagonal are meaningless in the diffusion approximation.
         """
-        return self.data[:self.E, :]
+        return self.data[: self.E, :]
 
     @scatter.setter
     def scatter(self, scatter):
-        self.data[:self.E, :] = scatter
+        self.data[: self.E, :] = scatter
+
     @property
     def absorb(self) -> np.array:
         r"""
@@ -75,11 +75,9 @@ class CrossSectionData:
         """
         return self.data[self.E]
 
-
     @absorb.setter
     def absorb(self, absorb):
         self.data[self.E] = absorb
-
 
     @property
     def total(self) -> np.array:
@@ -103,12 +101,11 @@ class CrossSectionData:
     def kappa(self, kappa):
         self.data[self.E + 4] = kappa
 
-
     @property
     def fission(self) -> np.array:
         r"""
         The fission cross section :math:`\Sigma_f`
-       """
+        """
         return self.data[self.E + 5]
 
     @fission.setter
@@ -134,11 +131,9 @@ class CrossSectionData:
         """
         return self.data[self.E + 3]
 
-
     @chi.setter
-    def chi(self,chi):
-        self.data[self.E + 3]=chi
-
+    def chi(self, chi):
+        self.data[self.E + 3] = chi
 
     @property
     def transport(self) -> np.array:
@@ -147,11 +142,9 @@ class CrossSectionData:
         """
         return self.data[self.special_cross_sections["transport"]]
 
-
     @transport.setter
-    def transport(self,transport):
-        self.data[self.special_cross_sections["transport"]]=transport
-
+    def transport(self, transport):
+        self.data[self.special_cross_sections["transport"]] = transport
 
     @property
     def diffusion(self):
@@ -160,11 +153,9 @@ class CrossSectionData:
         """
         return self.data[self.special_cross_sections["diffusion"]]
 
-
     @diffusion.setter
-    def diffusion(self,diffusion):
-        self.data[self.special_cross_sections["diffusion"]]=diffusion
-
+    def diffusion(self, diffusion):
+        self.data[self.special_cross_sections["diffusion"]] = diffusion
 
     @property
     def adf(self):
@@ -178,9 +169,8 @@ class CrossSectionData:
         return self.data[self.special_cross_sections["adf"]]
 
     @adf.setter
-    def adf(self,adf):
-        self.data[self.special_cross_sections["adf"]]=adf
-
+    def adf(self, adf):
+        self.data[self.special_cross_sections["adf"]] = adf
 
     @property
     def isfissile(self):
@@ -193,8 +183,7 @@ class CrossSectionData:
         if other == 0:
             return self
         name = self.name if self.name == other.name else self.name + " " + other.name
-        return CrossSectionData(name, self.data + other.data,
-                                self.special_cross_sections)
+        return CrossSectionData(name, self.data + other.data, self.special_cross_sections)
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -202,8 +191,7 @@ class CrossSectionData:
     def __mul__(self, density: float):
         if density == 0:
             return 0
-        return CrossSectionData(self.name, density * self.data,
-                                self.special_cross_sections)
+        return CrossSectionData(self.name, density * self.data, self.special_cross_sections)
 
     def __rmul__(self, density: float):
         return self.__mul__(density)
@@ -227,9 +215,9 @@ class CrossSectionData:
         return self.data[self.special_cross_sections[item]]
 
 
-def _isotope(scatter: np.array, absorb: np.array,
-             *, kappa: np.array = None, **special_cross_sections) -> Tuple[
-    np.array, Dict]:
+def _isotope(
+    scatter: np.array, absorb: np.array, *, kappa: np.array = None, **special_cross_sections
+) -> Tuple[np.array, Dict]:
     if kappa is None:
         kappa = np.zeros_like(absorb)
     E = absorb.shape[0]
@@ -246,15 +234,14 @@ def _isotope(scatter: np.array, absorb: np.array,
             special[key] = count
             count += 1
         except ValueError:
-            data[count:count + E, :] = value
+            data[count : count + E, :] = value
             special[key] = np.arange(count, count + E)
             count += E
     data = data[:count]
     return data, special
 
 
-def Isotope(name: str, scatter: np.array, absorb: np.array,
-            **kwargs):
+def Isotope(name: str, scatter: np.array, absorb: np.array, **kwargs):
     r"""
     Function used to generate the CrossSectionData of a non fissionable material
 
@@ -285,15 +272,25 @@ def test_isotope_generation():
     scatter = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     kappa = np.array([2, 3, 5])
     mat1 = Isotope("1", scatter, absorb)
-    assert np.all(mat1.absorb == absorb) and np.all(
-        mat1.scatter == scatter) and np.all(
-        mat1.kappa == np.zeros_like(absorb))
+    assert (
+        np.all(mat1.absorb == absorb)
+        and np.all(mat1.scatter == scatter)
+        and np.all(mat1.kappa == np.zeros_like(absorb))
+    )
     mat2 = Isotope("1", scatter, absorb, kappa=kappa)
     assert np.all(mat2.kappa == kappa)
 
 
-def Fissionable(name: str, scatter: np.array, absorb: np.array,
-                nusigmaf: np.array, chi: np.array, *, fission: np.array = None, **kwargs) -> CrossSectionData:
+def Fissionable(
+    name: str,
+    scatter: np.array,
+    absorb: np.array,
+    nusigmaf: np.array,
+    chi: np.array,
+    *,
+    fission: np.array = None,
+    **kwargs,
+) -> CrossSectionData:
     r"""
     Function used to generate the CrossSectionData of a Fissionable material
 

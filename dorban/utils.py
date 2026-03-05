@@ -69,8 +69,7 @@ def restore_array(array: np.array, black_absorber: np.array) -> np.array:
     """
     length = len(array) + len(black_absorber)
     fluxiter = iter(array)
-    resiter = (0 if i in black_absorber else next(fluxiter)
-               for i in range(length))
+    resiter = (0 if i in black_absorber else next(fluxiter) for i in range(length))
     return np.fromiter(resiter, array.dtype, count=length)
 
 
@@ -96,9 +95,9 @@ def vertex_in_neighbor(vertex: int, face: int) -> int:
     return 3 - vertex - face
 
 
-def triangles_with_vertex(cell: int, vertex: int,
-                          neighbors: Sequence[Sequence[int]],
-                          found: Optional[set[int]] = None) -> set:
+def triangles_with_vertex(
+    cell: int, vertex: int, neighbors: Sequence[Sequence[int]], found: Optional[set[int]] = None
+) -> set:
     r"""
     Finds all the triangles that have a common vertex with the given
     triangle not contained in a given face. The correspondece between vertices
@@ -142,10 +141,8 @@ def triangles_with_vertex(cell: int, vertex: int,
     for triangle, face in zip(dis1, other):
         if triangle not in founded_before:
             found = found.union(
-                triangles_with_vertex(triangle,
-                                      vertex_in_neighbor(vertex, face),
-                                      neighbors,
-                                      found.union(dis1)))
+                triangles_with_vertex(triangle, vertex_in_neighbor(vertex, face), neighbors, found.union(dis1))
+            )
     if ismain:
         found.remove(cell)
     return found
@@ -161,9 +158,7 @@ def intersect_partitions(partitions: Iterable[np.array]) -> np.array:
     >>> intersect_partitions([np.array([1,4,5]),np.array([2,2,6])])
     array([1, 1, 2, 1, 5])
     """
-    result = np.diff(
-        np.sort(np.hstack([np.cumsum(partition) for partition in partitions])),
-        prepend=0)
+    result = np.diff(np.sort(np.hstack([np.cumsum(partition) for partition in partitions])), prepend=0)
     nonzero = [i for i, x in enumerate(result) if not np.isclose(x, 0)]
     return result[nonzero]
 
@@ -181,8 +176,9 @@ def mink_sum(a: Sequence, b: Sequence) -> np.array:
     return np.array(np.add.outer(a, b).flatten(), dtype=int)
 
 
-def insert_black_absorber(cell: Union[int, Boundary], black: list[int],
-                          condition: Boundary = None) -> Union[int, Boundary]:
+def insert_black_absorber(
+    cell: Union[int, Boundary], black: list[int], condition: Boundary = None
+) -> Union[int, Boundary]:
     """
     This function gets a cell and a list of the numbers of
     the cells that should be ignored.
@@ -229,8 +225,7 @@ def sparse_columns(size: int, E: int):
     >>> sparse_columns(size, E)
     array([0, 1, 0, 1, 2, 3, 2, 3])
     """
-    return np.array([(i // (E ** 2)) * E + i % E
-                     for i in range(size * E)])
+    return np.array([(i // (E**2)) * E + i % E for i in range(size * E)])
 
 
 def normalize(x: np.array):
@@ -255,9 +250,7 @@ def space_energy_reshape(flux: np.array, cells: int, E: int):
     return np.reshape(flux, (cells, E))
 
 
-def collapse_flux(geometry: FiniteGeometry, fine_flux: np.array,
-                  fine_volumes: np.array,
-                  split: Any) -> np.array:
+def collapse_flux(geometry: FiniteGeometry, fine_flux: np.array, fine_volumes: np.array, split: Any) -> np.array:
     """
     Function that gets a fine flux obtained by preforming a computation on a refined
     core and collapses the flux back to the mesh of the original core.
@@ -278,13 +271,11 @@ def collapse_flux(geometry: FiniteGeometry, fine_flux: np.array,
     np.array
      The spatially collapsed flux
     """
-    assemblies = geometry.array_refine(np.arange(geometry.cells),
-                                       split)
+    assemblies = geometry.array_refine(np.arange(geometry.cells), split)
     volumes = geometry.array_refine(geometry.volumes, split)
     E = len(fine_flux) // len(assemblies)
     normalized_fine_flux = fine_flux * np.repeat(fine_volumes / volumes, E)
-    assemblies_with_energy = np.vstack(
-        [assemblies * E + e for e in range(E)]).flatten(order="F").astype(int)
+    assemblies_with_energy = np.vstack([assemblies * E + e for e in range(E)]).flatten(order="F").astype(int)
     return np.bincount(assemblies_with_energy, normalized_fine_flux)
 
 
