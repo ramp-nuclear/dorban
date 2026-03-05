@@ -1,0 +1,14 @@
+dependencies:
+  - numpy
+  - scipy
+  - slepc4py
+  - petsc4py
+  - matplotlib
+  - numba
+  - multipledispatch
+  - more-itertools
+  - pytest
+  - pytest-regressions
+  - hypothesis
+  - jupyter
+  - testbook

@@ -1,4 +1,3 @@
-import math
 from typing import Tuple
 
 import numpy as np
@@ -32,13 +31,13 @@ def diml_group1(absorb: float, fission: float, diff: float,
     lengths the length of the system
     """
     l = length / 2
-    a = op.bisect(lambda x: x * math.tan(x) - l / (2 * diff), 0, 1.1) / l
+    a = op.bisect(lambda x: x * np.tan(x) - l / (2 * diff), 0, 1.1) / l
     k = fission / (a ** 2 * diff + absorb)
     cells *= 2
     flux = np.cos([a * l * (-1 + 2 * i / cells) for i in
                    np.arange(cells)])[1::2]
     assert np.allclose(flux, flux[::-1])
-    return k[0], flux
+    return k.item(), flux
 
 
 def fuel_in_water(fuel: CrossSectionData, water: CrossSectionData,
@@ -64,7 +63,7 @@ def fuel_in_water(fuel: CrossSectionData, water: CrossSectionData,
     """
     fuel_cells *= 2
     water_cells *= 2
-    water_laplace_coefficient = -water.absorb[0] / diffusion[1]
+    water_laplace_coefficient = water.absorb[0] / diffusion[1]
     a_2 = np.sqrt(water_laplace_coefficient)[0]
     length = fuel_length + water_length
     C = (np.cos(a_2 * length) + 2 * diffusion[1] * a_2 * np.sin(
@@ -76,9 +75,7 @@ def fuel_in_water(fuel: CrossSectionData, water: CrossSectionData,
                 a_2 * fuel_length)) / \
              (diffusion[0] * np.cos(a_2 * fuel_length) +
               C * diffusion[0] * np.sin(a_2 * fuel_length))
-    a_1 = fsolve(lambda x: x * math.tan(x) - np.real(tan_a1), np.array([0]),
-                 xtol=1e-10)[0] \
-          / fuel_length
+    a_1 = op.bisect(lambda x: x * np.tan(x) - np.real(tan_a1).item(), 0, 1.1, xtol=1e-10) / fuel_length
     k = fuel.nusigmaf[0] / (fuel.absorb + diffusion[0] * a_1 ** 2)
     point = length * a_2
     ratio = (2 * diffusion[1] * a_2 * np.sin(point) - np.cos(point)) / (
@@ -94,7 +91,7 @@ def fuel_in_water(fuel: CrossSectionData, water: CrossSectionData,
     constant = water_flux[0] / fuel_flux[0]
     fuel_flux *= constant
     flux = np.hstack([water_flux[-1::-2], fuel_flux[1::2], water_flux[1::2]])
-    return float(k), flux
+    return k.item(), flux
 
 
 def test_hom_1dim_1group():
@@ -119,7 +116,8 @@ def test_hom_1dim_1group():
     k, flux = solve_k_diffusion(system, solver=solver)
     k_analytical, flux_analytical = diml_group1(
         isotope.absorb,
-        isotope.nusigmaf, system.current_calc.dc[0],
+        isotope.nusigmaf, 
+        system.current_calc.dc[0].item(),
         length,
         cells)
     flux_analytical = flux_analytical * np.sum(

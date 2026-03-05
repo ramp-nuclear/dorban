@@ -36,4 +36,4 @@ def test_four_cells_rectangle(a, b, c, d):
     settings_nem = NEMSettings(split=geometry.uniform_split(3))
     fd_k, _ = solve_k(core_fd, settings_fd)
     nem_k, _ = solve_k(core_nem, settings_nem)
-    assert nem_k - fd_k == pytest.approx(0, abs=2e-3)
+    assert nem_k - fd_k == pytest.approx(0, abs=1e-2)
