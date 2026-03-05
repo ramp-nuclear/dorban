@@ -37,7 +37,7 @@ def wielandt_shift(
 
 
 class GeneratorEigenvalue():
-    """
+    r"""
     generator class that solves the generalized eigenvalue problem Av=kMv.
     each iteration is like applying M^-1A to a vector, this way after enough
     iterations we get the largest eigenvalue and its eigenvector.
@@ -48,8 +48,8 @@ class GeneratorEigenvalue():
     k - guess for the top eigenvalue
     v - guess for the eigenvector
     tol_value - Absolute convergence tolerance for the eigenvalue
-    rtol_vector - relative convergence tolerance for the eigenvector in l\inf norm
-    atol_vector - absolute convergence tolerance for the eigenvector in l\inf norm
+    rtol_vector - relative convergence tolerance for the eigenvector in :math:`l_\inf` norm
+    atol_vector - absolute convergence tolerance for the eigenvector in :math:`l_\inf` norm
 
     """
 
