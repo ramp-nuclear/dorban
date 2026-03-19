@@ -5,7 +5,7 @@ from dorban.system import Core
 from dorban.utils import op_face
 
 
-def debug_discontinuity_factors(core: Core, maximal_allowed_value: float = 5.0) -> list[tuple[int, int, int]]:
+def debug_discontinuity_factors(core: Core, maximal_allowed_value: float = 10.0) -> list[tuple[int, int, int]]:
     """
     This is a tool to debug discontinuity factors. Usually discontinuity factors are between 0.25 and 4, this being the
     value of the discontinuity factors between fuel and water in a PWR type core. If the discontinuity values are outside
@@ -24,7 +24,7 @@ def debug_discontinuity_factors(core: Core, maximal_allowed_value: float = 5.0) 
     core: Core
      The dorban core.
     maximal_allowed_value: float
-     The maximal allowed value of a discontinuity factor. default is 5.
+     The maximal allowed value of a discontinuity factor. default is 10.
 
     Returns
     -------
