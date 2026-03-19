@@ -9,14 +9,11 @@ from testbook import testbook
     [
         "HTGR",
         "IAEA3D",
-        pytest.param(
-            "PWRMOX",
-            marks=pytest.mark.skip("Currently unsupported due to missing files"),
-        ),
+        "PWRMOX",
         "PWR_rod_bundle",
     ],
 )
 def test_notebook(notebook):
-    d = Path("../docs/source")
+    d = (Path(__file__).parent / Path("../docs/source")).resolve()
     with testbook(str(d / f"{notebook}.ipynb"), execute=True) as tb:
         assert tb.ref("k")
