@@ -9,7 +9,7 @@ import scipy.linalg
 from scipy import sparse
 from scipy.sparse import csr_matrix
 
-from dorban.eigenvalue_solvers.arnoldi_arpack import generalized_arnoldi
+from dorban.eigenvalue_solvers.arnoldi_arpack import generalized_arnoldi, shift_invert_arnoldi
 from dorban.eigenvalue_solvers.power_iteration import generalized_eigenvalue
 from dorban.eigenvalue_solvers.slepc_methods import (
     _petsc_options,
@@ -156,3 +156,18 @@ def test_petsc_options_are_restored():
     assert database.getString("test_dorban_kept") == "user value"
     assert not database.hasName("test_dorban_added")
     database.delValue("test_dorban_kept")
+
+
+@pytest.mark.parametrize(
+    "solver", [generalized_eigenvalue, generalized_arnoldi, shift_invert_arnoldi, generalized_eigenvalue_slepc]
+)
+@pytest.mark.parametrize("negative_guess", [False, True])
+def test_eigenvector_sign_is_positive(solver, negative_guess):
+    # the dominant eigenvector of a positive matrix is positive (Perron-Frobenius), but an eigensolver returns it
+    # with an arbitrary sign; the solvers return it with a positive sum
+    rng = np.random.default_rng(1)
+    A = csr_matrix(rng.random((30, 30)))
+    M = csr_matrix(np.diag(np.arange(1.0, 31.0)) * 3)
+    guess = -np.ones(30) if negative_guess else None
+    _, v = solver(A, M, v=guess)
+    assert np.all(v > 0)
