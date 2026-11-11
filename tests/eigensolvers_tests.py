@@ -9,6 +9,7 @@ import scipy.linalg
 from scipy import sparse
 from scipy.sparse import csr_matrix
 
+from dorban.eigenvalue_solvers import slepc_methods
 from dorban.eigenvalue_solvers.arnoldi_arpack import generalized_arnoldi, shift_invert_arnoldi
 from dorban.eigenvalue_solvers.power_iteration import generalized_eigenvalue
 from dorban.eigenvalue_solvers.slepc_methods import (
@@ -119,7 +120,9 @@ def test_energy_group_blocks_follow_the_scattering(scatter, adjoint, blocks):
 
 @pytest.mark.parametrize("scatter", [DOWN_SCATTER, UP_SCATTER], ids=["down-scatter", "up-scatter"])
 @pytest.mark.parametrize("adjoint", [False, True])
-def test_group_by_group_solve_finds_the_eigenvalue(scatter, adjoint):
+def test_group_by_group_solve_finds_the_eigenvalue(scatter, adjoint, monkeypatch):
+    # a problem this small is solved directly by default
+    monkeypatch.setattr(slepc_methods, "_DIRECT_SOLVE_SIZE", 0)
     A, M = _slab_matrices(scatter)
     if adjoint:
         A, M = A.T.tocsr(), M.T.tocsr()
@@ -170,3 +173,15 @@ def test_eigenvector_sign_is_positive(solver, negative_guess):
     guess = -np.ones(30) if negative_guess else None
     _, v = solver(A, M, v=guess)
     assert np.all(v > 0)
+
+
+@pytest.mark.parametrize("groups", [None, 1])
+def test_slepc_solves_a_tiny_problem(groups):
+    # algebraic multigrid broke down while setting up on this 2 x 2 problem (from a NEM first guess); small problems
+    # are solved directly
+    A = csr_matrix(np.diag([1.5, 1.5]))
+    M = csr_matrix(np.array([[2.25, -1.0], [-1.0, 4.596]]))
+    k, v = generalized_eigenvalue_slepc(A, M, groups=groups)
+    expected = np.max(np.linalg.eigvals(np.linalg.solve(M.toarray(), A.toarray())))
+    assert k == pytest.approx(expected, rel=1e-10)
+    assert np.allclose(A @ v, k * (M @ v))
