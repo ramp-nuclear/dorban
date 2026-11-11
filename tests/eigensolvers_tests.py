@@ -121,8 +121,9 @@ def test_energy_group_blocks_follow_the_scattering(scatter, adjoint, blocks):
 @pytest.mark.parametrize("scatter", [DOWN_SCATTER, UP_SCATTER], ids=["down-scatter", "up-scatter"])
 @pytest.mark.parametrize("adjoint", [False, True])
 def test_group_by_group_solve_finds_the_eigenvalue(scatter, adjoint, monkeypatch):
-    # a problem this small is solved directly by default
+    # a problem this small, and one dimensional, is solved directly by default
     monkeypatch.setattr(slepc_methods, "_DIRECT_SOLVE_SIZE", 0)
+    monkeypatch.setattr(slepc_methods, "_DIRECT_SOLVE_NEIGHBORS", -1)
     A, M = _slab_matrices(scatter)
     if adjoint:
         A, M = A.T.tocsr(), M.T.tocsr()
