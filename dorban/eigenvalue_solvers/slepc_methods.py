@@ -25,6 +25,8 @@ import slepc4py.SLEPc as slepc
 _OPTIONS_PREFIX = "dorban_eps_"
 # below this number of unknowns the linear problems are solved directly, which is faster there than algebraic multigrid
 _DIRECT_SOLVE_SIZE = 20000
+# problems whose cells have at most this many neighbors, two dimensional ones, are solved directly at any size
+_DIRECT_SOLVE_NEIGHBORS = 4
 
 
 @contextmanager
@@ -45,6 +47,19 @@ def _petsc_options(options: dict, prefix: str = _OPTIONS_PREFIX):
             database.delValue(name)
             if value is not None:
                 database[name] = value
+
+
+def spatial_neighbors(M: sparse.spmatrix, groups: int | None) -> int:
+    """
+    The largest number of neighbors of a cell in the matrix M, ordered by cell and then by energy group: the number
+    of off diagonal entries of a row in the same energy group. It is at most 2 in one dimension, 4 in two (3 for
+    triangles) and 6 in three (5 for triangular prisms).
+    """
+    groups = groups or 1
+    M = M.tocoo()
+    same_group = (M.row % groups == M.col % groups) & (M.row != M.col) & (M.data != 0)
+    counts = np.bincount(M.row[same_group], minlength=M.shape[0])
+    return int(counts.max()) if counts.size else 0
 
 
 def energy_group_blocks(M: sparse.spmatrix, groups: int) -> list[list[int]]:
@@ -124,16 +139,22 @@ def linear_solve_options(
     the correction equation for Jacobi-Davidson. The first that applies of:
 
     1. the linear solver or preconditioner the user gave (ksp_type, pc_type),
-    2. a direct solve, for fewer than _DIRECT_SOLVE_SIZE unknowns,
+    2. a direct solve, for fewer than _DIRECT_SOLVE_SIZE unknowns, or when no cell has more than
+       _DIRECT_SOLVE_NEIGHBORS neighbors (two dimensional problems),
     3. group by group (_group_by_group_options), when there are several energy groups and they are not all coupled
        by up-scatter,
     4. GMRES with algebraic multigrid, on all the energy groups at once.
 
     M is the matrix of the linear problems, numbered by cell and then by energy group (see energy_group_blocks).
+
+    A direct solve suits small problems and two dimensional ones, where the fill of the factors stays moderate: on two
+    dimensional problems of 60,000 to 250,000 unknowns it was 2 to 8 times faster than the iterative solve. In three
+    dimensions the fill grows fast (93 s against 4.5 s for 155,000 unknowns), so larger three dimensional problems
+    are solved iteratively.
     """
     if eps_type == "gd" or ksp_type is not None or pc_type is not None:
         return _explicit_options(eps_type, ksp_type, pc_type)
-    if M.shape[0] < _DIRECT_SOLVE_SIZE:
+    if M.shape[0] < _DIRECT_SOLVE_SIZE or spatial_neighbors(M, groups) <= _DIRECT_SOLVE_NEIGHBORS:
         return _direct_solve_options()
     if groups is not None and groups > 1:
         blocks = energy_group_blocks(M, groups)
@@ -182,7 +203,7 @@ def generalized_eigenvalue_slepc(
      algorithm, for a full list see the petsc manual,
      the useful ones are bcgsl, gmres, lgmres and preonly.
      If neither lin_solver_name nor pc_name is given, a default is chosen: a direct solve (LU) for fewer than
-     20000 unknowns, otherwise see groups.
+     20000 unknowns or when no cell has more than 4 neighbors (two dimensional problems), otherwise see groups.
      With solver_name='gd' it must be None or preonly: Generalized Davidson only applies the preconditioner.
     pc_name: str
      the name of the preconditioner to use during the KSP application,
@@ -194,8 +215,8 @@ def generalized_eigenvalue_slepc(
      this way direct solvers can be used, for example with lin_solver_name=preonly and pc_name=lu
     groups: int | None
      The number of energy groups, when the unknowns are ordered by cell and then by energy group. It describes M
-     and does not choose a solver: lin_solver_name and pc_name, when given, take precedence over the default it
-     enables. For 20000 unknowns or more, that default solves the energy groups one after the other, with the groups coupled by up-scatter
+     (it is needed to count the neighbors of the cells) and does not choose a solver: lin_solver_name and pc_name, when given, take precedence over the default it
+     enables. For three dimensional problems of 20000 unknowns or more, that default solves the energy groups one after the other, with the groups coupled by up-scatter
      together, each with algebraic multigrid (see energy_group_blocks). Without groups, GMRES with algebraic
      multigrid is used.
 
