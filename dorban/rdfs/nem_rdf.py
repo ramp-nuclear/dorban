@@ -108,6 +108,14 @@ def compute_boundary_fluxes_using_nem(
     return (average_flux - a1 / 2 + a2 / 2), (average_flux + a1 / 2 + a2 / 2)
 
 
+def _fake_neighbor_leakage(neighbor, leakage, cell, cell_leakage):
+    if not isinstance(neighbor, Boundary):
+        return leakage[neighbor]
+    # the mirror image across a reflective boundary, albedo 0, as in dorban.nem.two_node._neighbor_leakage
+    reflective = getattr(neighbor, "albedo", None) == 0
+    return cell_leakage if reflective else -cell_leakage
+
+
 def compute_rdfs(system: Core, currents: np.array, k: float, fluxes: Optional[np.array] = None) -> np.array:
     """
     Function to compute reference discontinuity factors (rdfs) of a two-dimensional cartesian system using the NEM approximation.
@@ -159,14 +167,10 @@ def compute_rdfs(system: Core, currents: np.array, k: float, fluxes: Optional[np
             else ll
         )
         transverse_l = 2 * system.geometry.distance_to_face(cell, 2 * (not axis))
-        # across a boundary the NEM kernel (dorban.nem.two_node) takes a fake neighbor of the cell's own width
-        # with minus the cell's own transverse leakage: the same here, so the factors are consistent with it
-        transverse_left = (
-            leakages[not axis][n] if not isinstance(n := neighbors[2 * axis], Boundary) else -transverse_leakage
-        )
-        transverse_right = (
-            leakages[not axis][n] if not isinstance(n := neighbors[2 * axis + 1], Boundary) else -transverse_leakage
-        )
+        # across a boundary the fake neighbor of the NEM kernel (dorban.nem.two_node._neighbor_leakage): the
+        # mirror image (the cell's own leakage) across a reflector, minus the cell's own leakage otherwise
+        transverse_left = _fake_neighbor_leakage(neighbors[2 * axis], leakages[not axis], cell, transverse_leakage)
+        transverse_right = _fake_neighbor_leakage(neighbors[2 * axis + 1], leakages[not axis], cell, transverse_leakage)
         mat = system.isotopes[cell]
         if np.any(fluxes):
             face_flux[cell, slice(2 * axis, 2 * axis + 2)] = compute_boundary_fluxes_using_nem(
