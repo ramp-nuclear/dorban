@@ -102,3 +102,73 @@ def test_nem_rdfs_2x1_problem_regression(file_regression):
     currents[3, 0] = current
     rdfs = compute_rdfs(color_set, currents, k)
     file_regression.check(str(rdfs))
+
+
+def test_rdfs_reproduce_a_fine_reference():
+    """Generalized equivalence: a heterogeneous 3x3-node problem solved with finite differences on a fine mesh,
+    homogenized per node (flux-volume weighting, node-face currents of the fine solution), is reproduced by NEM on
+    the 3x3 nodes with the discontinuity factors of compute_rdfs (k and node fluxes)."""
+    from dorban import Cartesian, Core, CurrentCalculatorFD, Fissionable, Isotope, Reflector
+    from dorban.geometry.boundary_conditions import Boundary
+    from dorban.nem.cmfd_current_calculator import CMFDCurrentCalculator
+    from dorban.nem.solve_nem import NEMSettings
+    from dorban.settings import FDSettings
+    from dorban.solve_equation import solve_k
+    from dorban.system import mesh_refinement
+
+    E = 2
+    fuel = Fissionable("fuel", scatter=np.array([[0.0, 0.0], [0.02, 0.0]]), absorb=np.array([0.010, 0.08]),
+                       nusigmaf=np.array([0.007, 0.135]), chi=np.array([1.0, 0.0]), diffusion=np.array([1.4, 0.4]))
+    water = Isotope("water", scatter=np.array([[0.0, 0.0], [0.04, 0.0]]), absorb=np.array([0.0005, 0.02]),
+                    diffusion=np.array([1.2, 0.15]))
+    n_node, n_sub, pitch, split = 3, 3, 1.26, 4
+    h = pitch / n_sub
+    nf = n_node * n_sub
+    mats, node_of_cell = [], []
+    for J in range(nf):
+        for I in range(nf):
+            ni, nj = I // n_sub, J // n_sub
+            centre = (ni == 1 and nj == 1) or (I % n_sub == 1 and J % n_sub == 1)
+            mats.append(water if centre else fuel)
+            node_of_cell.append(nj * n_node + ni)
+    fine = Core(mats, E, Cartesian([np.full(nf, h)] * 2, [Reflector()] * 4).to_polybox(), CurrentCalculatorFD.from_isotopes(mats))
+    ref = mesh_refinement(fine, fine.geometry.uniform_split(split))
+    k_ref, flux = solve_k(ref, FDSettings(split=ref.geometry.uniform_split(1)))
+    cells = ref.geometry.cells
+    phi = np.asarray(flux).reshape(cells, E)
+    hr = h / split
+    D = np.vstack([m["diffusion"] for m in ref.isotopes])
+    node_of = np.asarray(node_of_cell)[np.arange(cells) // (split * split)]  # refined cells come in blocks
+    N = n_node * n_node
+    nodes, flux_volume = [], np.zeros((N, E))
+    for n in range(N):
+        idx = np.nonzero(node_of == n)[0]
+        w = phi[idx]
+        W = w.sum(axis=0)
+        flux_volume[n] = W * hr * hr
+        total = sum(ref.isotopes[c].total * w[q] for q, c in enumerate(idx)) / W
+        scatter = sum(ref.isotopes[c].scatter * w[q][None, :] for q, c in enumerate(idx)) / W[None, :]
+        nusigmaf = sum(ref.isotopes[c].nusigmaf * w[q] for q, c in enumerate(idx)) / W
+        diffusion = sum(ref.isotopes[c]["diffusion"] * w[q] for q, c in enumerate(idx)) / W
+        kw = dict(scatter=scatter, absorb=total - scatter.sum(axis=0), diffusion=diffusion)
+        nodes.append(Fissionable(f"n{n}", nusigmaf=nusigmaf, chi=np.array([1.0, 0.0]), **kw) if nusigmaf.sum() > 0
+                     else Isotope(f"n{n}", **kw))
+    currents = np.zeros((N, 4, E))  # net current in +x / +y on the faces -x, +x, -y, +y, per unit area
+    for c in range(cells):
+        for face in (1, 3):
+            nb = ref.geometry.neighbors[c][face]
+            if isinstance(nb, Boundary) or node_of[nb] == node_of[c]:
+                continue
+            j = 2 * D[c] * D[nb] * (phi[c] - phi[nb]) / ((D[c] + D[nb]) * hr) * hr / pitch
+            currents[node_of[c], face] += j
+            currents[node_of[nb], face - 1] += j
+    average = flux_volume / pitch**2
+    dc = np.vstack([m["diffusion"] for m in nodes])
+    geometry = Cartesian([np.full(n_node, pitch)] * 2, [Reflector()] * 4)
+    rdfs = compute_rdfs(Core(nodes, E, geometry, CMFDCurrentCalculator(dc, dim=2)), currents, k_ref, average)
+    k, nodal = solve_k(Core(nodes, E, Cartesian([np.full(n_node, pitch)] * 2, [Reflector()] * 4),
+                            CMFDCurrentCalculator(dc, dim=2, df=rdfs)),
+                       NEMSettings(split=geometry.uniform_split(1), k_tol=1e-10, flux_rtol=1e-10, flux_atol=1e-13))
+    nodal = np.asarray(nodal).reshape(N, E)
+    assert abs(k - k_ref) < 1e-8 * k_ref
+    assert np.allclose(nodal / nodal.sum(), average / average.sum(), rtol=1e-7, atol=0)
