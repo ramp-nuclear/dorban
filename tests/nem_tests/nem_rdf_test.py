@@ -172,3 +172,35 @@ def test_rdfs_reproduce_a_fine_reference():
     nodal = np.asarray(nodal).reshape(N, E)
     assert abs(k - k_ref) < 1e-8 * k_ref
     assert np.allclose(nodal / nodal.sum(), average / average.sum(), rtol=1e-7, atol=0)
+
+
+def test_nem_quarter_core_with_reflective_cuts_equals_the_full_core():
+    """A problem symmetric in x and y solved in full and as its quarter with reflective boundaries on the symmetry
+    lines: the same k and node fluxes. Across a reflector the quadratic transverse leakage fit takes the mirror image of
+    the cell as its neighbor (minus the cell's own leakage gave +560 pcm here)."""
+    from dorban import Cartesian, Core, Fissionable, Isotope, Reflector
+    from dorban.geometry.boundary_conditions import Void
+    from dorban.nem.cmfd_current_calculator import CMFDCurrentCalculator
+    from dorban.nem.solve_nem import NEMSettings
+    from dorban.solve_equation import solve_k
+
+    f1 = Fissionable("f1", scatter=np.array([[0, 0], [0.02, 0]]), absorb=np.array([0.010, 0.08]),
+                     nusigmaf=np.array([0.007, 0.135]), chi=np.array([1.0, 0.0]), diffusion=np.array([1.4, 0.4]))
+    f2 = Fissionable("f2", scatter=np.array([[0, 0], [0.018, 0]]), absorb=np.array([0.011, 0.10]),
+                     nusigmaf=np.array([0.008, 0.16]), chi=np.array([1.0, 0.0]), diffusion=np.array([1.4, 0.4]))
+    w = Isotope("w", scatter=np.array([[0, 0], [0.04, 0]]), absorb=np.array([0.0005, 0.02]), diffusion=np.array([1.2, 0.15]))
+    rows = [[w, f1, f1, w], [f1, f2, f2, f1], [f1, f2, f2, f1], [w, f1, f1, w]]
+
+    def solve(mats, n, bcs):
+        geometry = Cartesian([np.full(n, 10.0)] * 2, bcs)
+        dc = np.vstack([m["diffusion"] for m in mats])
+        k, flux = solve_k(Core(mats, 2, geometry, CMFDCurrentCalculator(dc, dim=2)),
+                          NEMSettings(split=geometry.uniform_split(1), k_tol=1e-11, flux_rtol=1e-11, flux_atol=1e-14))
+        return k, np.asarray(flux).reshape(n * n, 2)
+
+    k_full, flux_full = solve([m for row in rows for m in row], 4, [Void()] * 4)
+    k_quarter, flux_quarter = solve([rows[2][2], rows[2][3], rows[3][2], rows[3][3]], 2,
+                                    [Reflector(), Void(), Reflector(), Void()])
+    flux_full = flux_full[[10, 11, 14, 15]]
+    assert abs(k_quarter - k_full) < 1e-9
+    assert np.allclose(flux_quarter / flux_quarter.sum(), flux_full / flux_full.sum(), rtol=1e-8, atol=0)
