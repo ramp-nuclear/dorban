@@ -11,6 +11,12 @@ from dorban.nem.cmfd_iterator import GeneratorNemCMFDSource
 
 
 def test_source_iteration_stops_with_some_zero_coupling_coefficients():
+    """
+    Some coupling coefficients are zero in a converged solution: at reflective faces they are zero at every
+    iteration. The stopping test may only wait while all of them are zero, which means they have not been computed
+    yet. Waiting for each of them to be nonzero, as the test once did, means a problem with a reflective boundary
+    never stops on tolerance, and solve_source_nem, with no maximal number of iterations by default, never returns.
+    """
     fuel = Fissionable(
         "Fuel",
         scatter=np.array([[0, 0], [0.02, 0]]),
