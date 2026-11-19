@@ -1,43 +1,123 @@
-from typing import Tuple
+from contextlib import contextmanager
+from typing import Optional, Tuple
 
 import numpy as np
 import petsc4py.PETSc as petsc
 import scipy.sparse as sparse
 import slepc4py.SLEPc as slepc
 
+# The linear solves inside the eigenvalue solver are configured through PETSc's options database, under this prefix.
+# The names of the options are PETSc's and SLEPc's:
+#   st_      the spectral transformation of SLEPc, which owns the linear problems solved with M
+#   ksp      the Krylov subspace method that solves them (gmres, fgmres, or preonly: apply the preconditioner once)
+#   pc       the preconditioner (lu is a direct solve, gamg algebraic multigrid, fieldsplit splits the unknowns)
+#   fieldsplit_<i>_   the solver of the i-th part of a fieldsplit preconditioner
 _OPTIONS_PREFIX = "dorban_eps_"
 
 
-def _inner_solver_options(solver_name, lin_solver_name, pc_name, groups, lin_rtol) -> dict:
+@contextmanager
+def _petsc_options(options: dict, prefix: str = _OPTIONS_PREFIX):
     """
-    PETSc options for the linear solves inside the eigenvalue solver: the solves with M for Krylov-Schur,
-    the correction equation for Jacobi-Davidson.
+    Set options in PETSc's global options database for the duration of the block, then restore what was there.
     """
-    if solver_name == "gd":
-        lin_solver_name = "preonly"
-    if lin_solver_name is not None or pc_name is not None:
-        options = {}
-        if lin_solver_name is not None:
-            options["st_ksp_type"] = lin_solver_name
-        if pc_name is not None:
-            options["st_pc_type"] = pc_name
-        return options
-    if groups is not None and groups > 1:
-        # With only down-scatter, M is block lower triangular by energy group and solving one group after the
-        # other is exact. Each group is a diffusion operator, solved with multigrid. With up-scatter this is a
-        # preconditioner, and the outer flexible GMRES makes the solve exact.
-        options = {
-            "st_ksp_type": "fgmres",
-            "st_pc_type": "fieldsplit",
-            "st_pc_fieldsplit_type": "multiplicative",
-            "st_pc_fieldsplit_block_size": str(groups),
-        }
-        for group in range(groups):
-            options[f"st_fieldsplit_{group}_ksp_type"] = "gmres"
-            options[f"st_fieldsplit_{group}_pc_type"] = "gamg"
-            options[f"st_fieldsplit_{group}_ksp_rtol"] = str(lin_rtol / 100)
-        return options
+    database = petsc.Options()
+    previous = {}
+    try:
+        for key, value in options.items():
+            name = prefix + key
+            previous[name] = database.getString(name) if database.hasName(name) else None
+            database[name] = value
+        yield
+    finally:
+        for name, value in previous.items():
+            database.delValue(name)
+            if value is not None:
+                database[name] = value
+
+
+def energy_group_blocks(M: sparse.spmatrix, groups: int) -> list[list[int]]:
+    """
+    The energy groups of M, ordered by cell and then by energy group, in the order in which to solve them.
+
+    Group j is coupled to group i in M when neutrons scatter from j to i. Groups that are coupled in both
+    directions, through up-scatter, are put in one block and solved together. The blocks are ordered so that each
+    block only receives neutrons from the blocks before it: then M is block lower triangular in this order, and
+    solving one block after the other is exact. With only down-scatter every group is a block, from the fastest to
+    the slowest; in the adjoint problem the order is reversed.
+    """
+    M = M.tocoo()
+    same_cell = (M.row // groups == M.col // groups) & (M.row != M.col) & (M.data != 0)
+    reaches = np.eye(groups, dtype=bool)  # reaches[j, i]: neutrons from group j reach group i
+    reaches[M.col[same_cell] % groups, M.row[same_cell] % groups] = True
+    for k in range(groups):  # transitive closure
+        reaches |= np.outer(reaches[:, k], reaches[k, :])
+    blocks = {tuple(np.flatnonzero(reaches[g] & reaches[:, g]).tolist()): None for g in range(groups)}
+    # a block that reaches another is reached by fewer groups, so this is an order of solution
+    return [list(block) for block in sorted(blocks, key=lambda block: reaches[:, block[0]].sum())]
+
+
+def _explicit_options(eps_type: str, ksp_type: Optional[str], pc_type: Optional[str]) -> dict:
+    """The linear solver and preconditioner the user asked for."""
+    if eps_type == "gd":
+        # Generalized Davidson only applies the preconditioner, it does not solve linear problems
+        if ksp_type not in (None, "preonly"):
+            raise ValueError(
+                f"solver_name='gd' only applies the preconditioner, lin_solver_name={ksp_type!r} is invalid"
+            )
+        ksp_type = "preonly"
+    elif ksp_type is None and pc_type is not None:
+        # SLEPc would apply the preconditioner alone, a far from exact solve unless it is a direct one
+        ksp_type = "gmres"
+    options = {"st_ksp_type": ksp_type}
+    if pc_type is not None:
+        options["st_pc_type"] = pc_type
+    return options
+
+
+def _group_by_group_options(blocks: list[list[int]], groups: int, lin_rtol: float) -> dict:
+    """
+    Solve the blocks of energy groups one after the other (multiplicative fieldsplit, block Gauss-Seidel), each with
+    GMRES and algebraic multigrid. In the order of energy_group_blocks this is exact, but each block is solved
+    iteratively, so the outer solve is flexible GMRES, and the blocks are solved 100 times more accurately than it.
+    """
+    options = {
+        "st_ksp_type": "fgmres",
+        "st_pc_type": "fieldsplit",
+        "st_pc_fieldsplit_type": "multiplicative",
+        "st_pc_fieldsplit_block_size": str(groups),
+    }
+    for i, block in enumerate(blocks):
+        options[f"st_pc_fieldsplit_{i}_fields"] = ",".join(map(str, block))
+        options[f"st_fieldsplit_{i}_ksp_type"] = "gmres"
+        options[f"st_fieldsplit_{i}_pc_type"] = "gamg"
+        options[f"st_fieldsplit_{i}_ksp_rtol"] = str(lin_rtol / 100)
+    return options
+
+
+def _gmres_multigrid_options() -> dict:
+    """GMRES preconditioned with algebraic multigrid, on all the energy groups at once."""
     return {"st_ksp_type": "gmres", "st_pc_type": "gamg"}
+
+
+def linear_solve_options(
+    eps_type: str, ksp_type: Optional[str], pc_type: Optional[str], groups: Optional[int], lin_rtol: float, M
+) -> dict:
+    """
+    PETSc options for the linear problems solved inside the eigenvalue solver: the solves with M for Krylov-Schur,
+    the correction equation for Jacobi-Davidson. The first that applies of:
+
+    1. the linear solver or preconditioner the user gave (ksp_type, pc_type),
+    2. group by group (_group_by_group_options), when there are several energy groups and they are not all coupled
+       by up-scatter,
+    3. GMRES with algebraic multigrid.
+    """
+    if eps_type == "gd" or ksp_type is not None or pc_type is not None:
+        return _explicit_options(eps_type, ksp_type, pc_type)
+    if groups is not None and groups > 1:
+        blocks = energy_group_blocks(M, groups)
+        if len(blocks) > 1:
+            return _group_by_group_options(blocks, groups, lin_rtol)
+    return _gmres_multigrid_options()
 
 
 def generalized_eigenvalue_slepc(
@@ -80,17 +160,21 @@ def generalized_eigenvalue_slepc(
      algorithm, for a full list see the petsc manual,
      the useful ones are bcgsl, gmres, lgmres and preonly.
      If neither lin_solver_name nor pc_name is given, a default is chosen, see groups.
+     With solver_name='gd' it must be None or preonly: Generalized Davidson only applies the preconditioner.
     pc_name: str
      the name of the preconditioner to use during the KSP application,
      if None then the default of the chosen KSP is used.
      For a full list see the petsc manual, some of them are
      jacobi, bjacobi, ilu, gamg and lu.
+     If it is given without lin_solver_name, the KSP is gmres.
      If the KSP is set to preonly then it only applies the preconditioner
-     this way direct solvers can be used, for example with pc_name=lu
+     this way direct solvers can be used, for example with lin_solver_name=preonly and pc_name=lu
     groups: Optional[int]
-     The number of energy groups, when the unknowns are ordered by cell and then by energy group.
-     If given (and neither lin_solver_name nor pc_name is), the linear problems are solved one energy group
-     after the other, each with algebraic multigrid. Otherwise GMRES with algebraic multigrid is used.
+     The number of energy groups, when the unknowns are ordered by cell and then by energy group. It describes M
+     and does not choose a solver: lin_solver_name and pc_name, when given, take precedence over the default it
+     enables. That default solves the energy groups one after the other, with the groups coupled by up-scatter
+     together, each with algebraic multigrid (see energy_group_blocks). Without groups, GMRES with algebraic
+     multigrid is used.
 
     Returns
     -------
@@ -98,17 +182,13 @@ def generalized_eigenvalue_slepc(
      the maximal eigenvalue and its eigenvector
     """
     max_iter = None if max_iter == np.inf else max_iter
-    options = _inner_solver_options(solver_name, lin_solver_name, pc_name, groups, lin_rtol)
-    database = petsc.Options()
-    for key, value in options.items():
-        database[_OPTIONS_PREFIX + key] = value
-    solver = slepc.EPS()
-    solver.create()
+    options = linear_solve_options(solver_name, lin_solver_name, pc_name, groups, lin_rtol, M)
     sA = scipy_to_petcs(A)
     sM = scipy_to_petcs(M)
+    if groups is not None and groups > 1:
+        sM.setBlockSize(groups)
+    solver = slepc.EPS().create()
     try:
-        if groups is not None and groups > 1:
-            sM.setBlockSize(groups)
         solver.setOperators(sA, sM)
         solver.setType(solver_name)
         solver.setWhichEigenpairs(slepc.EPS.Which.LARGEST_MAGNITUDE)
@@ -117,20 +197,22 @@ def generalized_eigenvalue_slepc(
             solver.setInitialSpace(petsc.Vec().createWithArray(v))
         solver.getST().getKSP().setTolerances(lin_rtol, None)
         solver.setOptionsPrefix(_OPTIONS_PREFIX)
-        solver.setFromOptions()
-        solver.solve()
+        # the options of the linear solves are read when the solve sets up its solvers
+        with _petsc_options(options):
+            solver.setFromOptions()
+            solver.solve()
         if solver.getConverged() < 1:
             raise RuntimeError(
                 f"SLEPc did not converge to an eigenvalue, converged reason {solver.getConvergedReason()}"
             )
+        vr, vi = sA.createVecs()
+        k = solver.getEigenpair(0, vr, vi)
+        vector = vr.getArray().copy()
+        vr.destroy()
+        vi.destroy()
     finally:
-        for key in options:
-            database.delValue(_OPTIONS_PREFIX + key)
-    vr, vi = sA.createVecs()
-    k = solver.getEigenpair(0, vr, vi)
-    vector = vr.getArray().copy()
-    for petsc_object in (vr, vi, sA, sM, solver):
-        petsc_object.destroy()
+        for petsc_object in (sA, sM, solver):
+            petsc_object.destroy()
     assert k == k.real
     return k.real, vector
 
