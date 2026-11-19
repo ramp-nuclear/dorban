@@ -125,10 +125,10 @@ def test_rdfs_reproduce_a_fine_reference():
     h = pitch / n_sub
     nf = n_node * n_sub
     mats, node_of_cell = [], []
-    for J in range(nf):
-        for I in range(nf):
-            ni, nj = I // n_sub, J // n_sub
-            centre = (ni == 1 and nj == 1) or (I % n_sub == 1 and J % n_sub == 1)
+    for fy in range(nf):
+        for fx in range(nf):
+            ni, nj = fx // n_sub, fy // n_sub
+            centre = (ni == 1 and nj == 1) or (fx % n_sub == 1 and fy % n_sub == 1)
             mats.append(water if centre else fuel)
             node_of_cell.append(nj * n_node + ni)
     fine = Core(mats, E, Cartesian([np.full(nf, h)] * 2, [Reflector()] * 4).to_polybox(), CurrentCalculatorFD.from_isotopes(mats))

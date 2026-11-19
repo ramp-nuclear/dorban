@@ -115,7 +115,7 @@ def _fake_neighbor_leakage(neighbor, leakage, cell, cell_leakage):
 
 
 def compute_rdfs(system: Core, currents: np.array, k: float, fluxes: Optional[np.array] = None) -> np.array:
-    """
+    r"""
     Function to compute reference discontinuity factors (rdfs) of a two-dimensional cartesian system using the NEM approximation.
     Assuming the currents between any two cells in known and the k eigenvalue is also known.
     This function is useful to compute rdfs from a unit cell computation, if all the currents between the
