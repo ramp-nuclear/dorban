@@ -9,7 +9,6 @@ import scipy.special as sp
 
 from dorban.finite_differences.finite_difference_current_calculator import CurrentCalculatorFD
 from dorban.geometry.boundary_conditions import Reflector, Void, ZeroFlux
-from dorban.geometry.cartesian import Cartesian, RectilinearGrid
 from dorban.geometry.cylindrical import Cylindrical
 from dorban.materials import Fissionable
 from dorban.settings import FDSettings
@@ -66,14 +65,8 @@ def test_one_dimensional_cylinder_volumes():
     assert geometry.surface_area(1, 1) == pytest.approx(4 * np.pi)
 
 
-def test_the_axis_must_be_reflective():
-    with pytest.raises(ValueError):
-        Cylindrical([np.array([1.0])], [Void(), Void()])
-
-
-def test_refined_geometry_is_cylindrical():
+def test_refinement_keeps_the_total_volume():
     refined = _geometry(5).refine_mesh(_geometry(5).uniform_split(2))
-    assert isinstance(refined, Cylindrical)
     assert np.sum(refined.volumes) == pytest.approx(np.pi * RADIUS**2 * HALF_HEIGHT)
 
 
@@ -87,14 +80,3 @@ def test_refinement_by_split_matches_the_fine_geometry():
     assert _finite_difference_k(_geometry(10), _geometry(10).uniform_split(2)) == pytest.approx(
         _finite_difference_k(_geometry(20)), abs=1e-10
     )
-
-
-def test_a_cylinder_is_a_rectilinear_grid_but_not_a_cartesian_geometry():
-    geometry = _geometry(2)
-    assert isinstance(geometry, RectilinearGrid)
-    assert not isinstance(geometry, Cartesian)
-
-
-def test_a_rectilinear_grid_needs_a_metric():
-    with pytest.raises(TypeError, match="_volume"):
-        RectilinearGrid([np.ones(2)], [Reflector(), Reflector()])

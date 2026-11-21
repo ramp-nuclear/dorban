@@ -4,7 +4,7 @@ Contains the Cartesian Geometry class
 
 from abc import abstractmethod
 from bisect import bisect_right
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Protocol, Self, Sequence, Tuple, Union
 
 import numba
 import numpy as np
@@ -64,9 +64,9 @@ def _return_neighbors(left, right, back, forward, down, up, dim):
         return [left, right, back, forward, down, up]
 
 
-class RectilinearGrid(FiniteGeometry):
+class RectilinearGrid(FiniteGeometry, Protocol):
     r"""
-    Abstract class of the geometries whose cells are the products of intervals along each axis: a grid of
+    Protocol of the geometries whose cells are the products of intervals along each axis: a grid of
     :math:`x\cdot y\cdot z` cells, the lengths of the intervals given along each axis.
 
     The cells of the grid are numbered from left to right then from back to front and then from bottom to top, like
@@ -78,7 +78,8 @@ class RectilinearGrid(FiniteGeometry):
 
     Cells of the grid can be filled with black absorber; the cells of the geometry are numbered by removing them and
     keeping the order of the grid. The numbering, the neighbors, the distances to the faces and the refinement are the
-    same for every such geometry; the volumes and the areas of the faces, the metric, are given by the subclasses:
+    same for every such geometry, and its subclasses share this implementation of them; the volumes and the areas of
+    the faces, the metric, are given by the subclasses:
     :class:`Cartesian` for boxes, :class:`~dorban.geometry.cylindrical.Cylindrical` for rings of a cylinder.
     """
 
@@ -404,9 +405,9 @@ class RectilinearGrid(FiniteGeometry):
         )
         return refined_with_black[non_black_refined_indices]
 
-    def refine_mesh(self, split: List[Sequence[int]]) -> "RectilinearGrid":
+    def refine_mesh(self, split: List[Sequence[int]]) -> Self:
         """
-        This function returns a new Cartesian Geometry with refined mesh
+        This function returns a new geometry of the same class with refined mesh
         according to the split data.
 
         Parameters
@@ -419,8 +420,8 @@ class RectilinearGrid(FiniteGeometry):
 
         Returns
         -------
-        Cartesian
-         new Geometry with a refined mesh
+        Self
+         new Geometry of the same class with a refined mesh
         """
         black_absorber_refined = self.array_refine_with_black_absorber(
             np.array([i in self.black_absorber for i in range(self.x * self.y * self.z)]), split

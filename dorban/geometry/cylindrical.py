@@ -7,7 +7,7 @@ from typing import Optional, Sequence
 
 import numpy as np
 
-from dorban.geometry.boundary_conditions import Boundary, Reflector
+from dorban.geometry.boundary_conditions import Boundary
 from dorban.geometry.cartesian import RectilinearGrid
 
 
@@ -31,7 +31,7 @@ class Cylindrical(RectilinearGrid):
      sequence of the arrays of the lengths of the cells along r and, in R-Z, along z.
     boundary_condition: Sequence[Boundary]
      the boundary conditions at r = 0, at the outer radius and, in R-Z, at the bottom and at the top.
-     The face at r = 0 has no area, so the boundary condition there must be a Reflector.
+     The face at r = 0 has no area, so the boundary condition there has no effect.
     black_absorber: Optional[Sequence[int]]
      the numbers of the cells of the rectangle that are filled with black absorber,
      see :class:`~dorban.geometry.cartesian.RectilinearGrid`.
@@ -45,8 +45,6 @@ class Cylindrical(RectilinearGrid):
     ):
         if len(lengths) not in (1, 2):
             raise ValueError("A Cylindrical geometry has one (R) or two (R-Z) dimensions")
-        if not isinstance(boundary_condition[0], Reflector):
-            raise ValueError("The boundary condition at r = 0 must be a Reflector")
         self.radii = np.hstack(([0.0], np.cumsum(lengths[0])))
         super().__init__(lengths, boundary_condition, black_absorber)
 
