@@ -130,8 +130,9 @@ def test_group_by_group_solve_finds_the_eigenvalue(scatter, adjoint):
     assert k == pytest.approx(exact, rel=1e-9)
 
 
-def test_a_preconditioner_alone_is_used_with_gmres():
-    # Without a Krylov method SLEPc applies the preconditioner once instead of solving: k came out 0.00043 for 0.0106
+def test_slepc_finds_the_eigenvalue_when_only_a_preconditioner_is_given():
+    # pc_name alone used to leave SLEPc's default Krylov method, preonly, which applies the preconditioner once
+    # instead of solving: k came out 0.00043 instead of 0.0106. It must be used with GMRES.
     A, M = _slab_matrices(DOWN_SCATTER)
     exact = np.max(np.abs(scipy.linalg.eigvals(A.toarray(), M.toarray())))
     k, _ = generalized_eigenvalue_slepc(A, M, groups=4, pc_name="jacobi")
