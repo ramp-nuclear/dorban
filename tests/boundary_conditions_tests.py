@@ -52,8 +52,17 @@ def finite_difference_k(boundary, cells):
     return k
 
 
-@pytest.mark.parametrize("boundary, albedo", [(Void, 0.5), (ExtrapolationLength, ExtrapolationLength.constant)])
-def test_vacuum_boundary_converges_with_second_order(boundary, albedo):
+class PartialReflector(AlbedoBoundary, Boundary):
+    """A boundary condition that dorban does not define, given only by its albedo."""
+
+    albedo = 0.2
+
+
+@pytest.mark.parametrize(
+    "boundary, albedo",
+    [(Void, 0.5), (ExtrapolationLength, ExtrapolationLength.constant), (PartialReflector, PartialReflector.albedo)],
+)
+def test_albedo_boundary_converges_with_second_order(boundary, albedo):
     reference = exact_k(albedo)
     coarse, fine = finite_difference_k(boundary, 20), finite_difference_k(boundary, 40)
     assert (coarse - reference) / (fine - reference) == pytest.approx(4, rel=0.05)
@@ -61,9 +70,15 @@ def test_vacuum_boundary_converges_with_second_order(boundary, albedo):
 
 
 @pytest.mark.parametrize(
-    "boundary, albedo", [(Void, 0.5), (ExtrapolationLength, ExtrapolationLength.constant), (ZeroFlux, np.inf)]
+    "boundary, albedo",
+    [
+        (Void, 0.5),
+        (ExtrapolationLength, ExtrapolationLength.constant),
+        (ZeroFlux, np.inf),
+        (PartialReflector, PartialReflector.albedo),
+    ],
 )
-def test_nem_vacuum_boundary(boundary, albedo):
+def test_nem_albedo_boundary(boundary, albedo):
     # the slab as a strip of two 5 cm nodes, reflective above and below
     geometry = Cartesian(
         [np.full(2, HALF_WIDTH / 2), np.array([5.0])], [Reflector(), boundary(), Reflector(), Reflector()]
@@ -74,31 +89,9 @@ def test_nem_vacuum_boundary(boundary, albedo):
     assert k == pytest.approx(exact_k(albedo), abs=0.5e-5)
 
 
-class PartialReflector(AlbedoBoundary):
-    """A boundary condition that dorban does not define, given only by its albedo."""
-
-    albedo = 0.2
-
-
-def test_finite_differences_use_the_albedo_of_a_new_boundary_condition():
-    reference = exact_k(PartialReflector.albedo)
-    coarse, fine = finite_difference_k(PartialReflector, 20), finite_difference_k(PartialReflector, 40)
-    assert (4 * fine - coarse) / 3 == pytest.approx(reference, abs=1e-5)
-
-
-def test_nem_uses_the_albedo_of_a_new_boundary_condition():
-    test_nem_vacuum_boundary(PartialReflector, PartialReflector.albedo)
-
-
-def test_an_albedo_boundary_needs_an_albedo():
-    class NoAlbedo(AlbedoBoundary):
-        pass
-
-    with pytest.raises(TypeError, match="albedo"):
-        NoAlbedo()
-
-
 def test_nem_rejects_a_boundary_condition_without_an_albedo():
+    # the boundary conditions reach NEM inside geometry.neighbors, typed int | Boundary, so no static check can tell
+    # that one has no albedo: NEM must raise rather than treat it as reflective
     class NotAnAlbedo(Boundary):
         def compute_boundary_coefficient(self, geometry, E, current_calc, cell, face):
             return np.zeros(0), np.zeros(0), np.zeros(0)

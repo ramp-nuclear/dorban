@@ -36,44 +36,23 @@ logger = logging.getLogger(__name__)
 
 
 def _albedo(boundary: Boundary) -> float:
-    """The albedo of a boundary condition, which NEM needs: it supports exactly the AlbedoBoundary conditions."""
+    """
+    The albedo of a boundary condition, which NEM needs: it supports exactly the boundary conditions with an albedo,
+    see :class:`~dorban.geometry.boundary_conditions.AlbedoBoundary`.
+    """
     if not isinstance(boundary, AlbedoBoundary):
         raise NotImplementedError(
             f"The boundary condition of type {type(boundary).__name__} isn't implemented in the NEM kernel: "
-            "it supports the boundary conditions of the form J = albedo * flux, the subclasses of AlbedoBoundary."
+            "it supports the boundary conditions of the form J = albedo * flux, which have an albedo attribute."
         )
     return boundary.albedo
-
-
-def boundary_conditions_numbering(boundary: Boundary) -> int:
-    r"""
-    Function that assigns a negative number to a boundary condition, from its albedo :math:`\alpha` in
-    :math:`J=\alpha\phi` at the boundary (see :class:`~dorban.geometry.boundary_conditions.AlbedoBoundary`):
-    -2 for :math:`\alpha=0` (reflective), -3 for :math:`\alpha=\infty` (zero flux) and -1 otherwise, where the value
-    of :math:`\alpha` of each face is given by :func:`boundary_albedos`.
-    Boundary conditions that are not AlbedoBoundary raise NotImplementedError.
-
-    Parameters
-    ----------
-    boundary: Boundary
-     The boundary condition
-
-    Returns
-    -------
-    int
-    """
-    albedo = _albedo(boundary)
-    if albedo == 0:
-        return -2
-    if np.isinf(albedo):
-        return -3
-    return -1
 
 
 def boundary_albedos(neighbors: Iterable[Iterable[int | Boundary]]) -> np.array:
     r"""
     The albedo :math:`\alpha` of each face, in :math:`J=\alpha\phi` at the boundary: the albedo of the boundary
-    condition on boundary faces, and 0 on faces between cells.
+    condition on boundary faces (0 reflective, infinity zero flux), and 0 on faces between cells. The compiled kernels
+    tell the boundary conditions apart by these values.
 
     Parameters
     ----------
@@ -93,8 +72,9 @@ def boundary_albedos(neighbors: Iterable[Iterable[int | Boundary]]) -> np.array:
 
 def change_neighbors(neighbors: Iterable[Iterable[int | Boundary]]) -> np.array:
     """
-    Function that creates an array representing the neighbor relations of cells, boundary conditions object are
-    replaced by negative numbers that represent them. Numbers of neighbors remain unchanged.
+    Function that creates an array representing the neighbor relations of cells: boundary conditions are replaced by
+    -1, and the albedo of each boundary face is given by :func:`boundary_albedos`. Numbers of neighbors remain
+    unchanged.
 
     Parameters
     ----------
@@ -105,12 +85,7 @@ def change_neighbors(neighbors: Iterable[Iterable[int | Boundary]]) -> np.array:
     -------
     np.array
     """
-    return np.array(
-        [
-            [n if not isinstance(n, Boundary) else boundary_conditions_numbering(n) for n in cell_neighbors]
-            for cell_neighbors in neighbors
-        ]
-    )
+    return np.array([[-1 if isinstance(n, Boundary) else n for n in cell_neighbors] for cell_neighbors in neighbors])
 
 
 def change_isotopes(isotopes: Iterable[CrossSectionData], E: int) -> np.array:
@@ -561,7 +536,8 @@ def update_coupling_coefficients(
                     leakage_left,
                 )
                 coupling[neighbor, op_face(face)] = -coupling[cell, face]
-            elif neighbor == -1 or neighbor == -3:
+            elif neighbor < 0 and albedos[cell, face] > 0:
+                # a reflective face, albedo 0, has no current and its coupling coefficient stays 0
                 coupling[cell, face] = _coupling_between_cell_and_boundary(
                     E,
                     v,

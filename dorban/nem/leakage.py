@@ -132,11 +132,11 @@ def leakage(
                 right_current = current_between_two_cells(
                     cell, right, axis, distances, surfaces_areas, dc, df, coupling, E, flux
                 )
-            elif right == -1 or right == -3:
+            elif albedos[cell, 2 * axis + 1] > 0:
                 right_current = current_cell_and_boundary(
                     surfaces_areas[cell, 2 * axis + 1],
                     coupling[cell, 2 * axis + 1],
-                    _boundary_coefficient(right, albedos[cell, 2 * axis + 1], dc[cell], distances[cell, 2 * axis + 1]),
+                    _boundary_coefficient(albedos[cell, 2 * axis + 1], dc[cell], distances[cell, 2 * axis + 1]),
                     flux[cell * E : cell * E + E],
                 )
             else:
@@ -145,11 +145,11 @@ def leakage(
                 left_current = -current_between_two_cells(
                     left, cell, axis, distances, surfaces_areas, dc, df, coupling, E, flux
                 )
-            elif left == -1 or left == -3:
+            elif albedos[cell, 2 * axis] > 0:
                 left_current = current_cell_and_boundary(
                     surfaces_areas[cell, 2 * axis],
                     coupling[cell, 2 * axis],
-                    _boundary_coefficient(left, albedos[cell, 2 * axis], dc[cell], distances[cell, 2 * axis]),
+                    _boundary_coefficient(albedos[cell, 2 * axis], dc[cell], distances[cell, 2 * axis]),
                     flux[cell * E : cell * E + E],
                 )
             else:
@@ -196,12 +196,12 @@ def current_between_two_cells(
 
 
 @numba.njit(cache=True)
-def _boundary_coefficient(boundary: int, albedo: float, dc: np.array, distance: float) -> np.array:
+def _boundary_coefficient(albedo: float, dc: np.array, distance: float) -> np.array:
     """
     The current through a boundary face per unit flux and area without the coupling coefficient: the albedo for
-    J = albedo * phi (number -1) and the finite differences D / (l / 2) for zero flux (number -3).
+    J = albedo * phi, and the finite differences D / (l / 2) for zero flux, an infinite albedo.
     """
-    if boundary == -3:
+    if np.isinf(albedo):
         return dc / distance
     return np.full(dc.shape[0], albedo)
 

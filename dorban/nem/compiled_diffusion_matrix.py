@@ -81,15 +81,7 @@ def _diffusion_matrix(
                     surface_areas[cell, j],
                     coupling[cell, j],
                 )
-            elif neighbor == -1:
-                # J = albedo * phi at the boundary
-                area = surface_areas[cell, j]
-                r, c, v = (
-                    np.arange(cell * E, (cell + 1) * E),
-                    np.arange(cell * E, (cell + 1) * E),
-                    coupling[cell, j] * area + np.full(E, albedos[cell, j] * area),
-                )
-            elif neighbor == -3:
+            elif np.isinf(albedos[cell, j]):
                 # zero flux at the boundary, the finite differences current is D * phi / (l / 2)
                 area = surface_areas[cell, j]
                 r, c, v = (
@@ -97,15 +89,14 @@ def _diffusion_matrix(
                     np.arange(cell * E, (cell + 1) * E),
                     (coupling[cell, j] + dc[cell] / distances[cell, j]) * area,
                 )
-            elif neighbor == -2:
+            else:
+                # J = albedo * phi at the boundary; a reflective face, albedo 0, has only the coupling term
                 area = surface_areas[cell, j]
                 r, c, v = (
                     np.arange(cell * E, (cell + 1) * E),
                     np.arange(cell * E, (cell + 1) * E),
-                    coupling[cell, j] * area,
+                    coupling[cell, j] * area + np.full(E, albedos[cell, j] * area),
                 )
-            else:
-                raise ValueError
             row_indices.append(r)
             col_indices.append(c)
             values.append(v)
