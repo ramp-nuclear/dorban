@@ -8,17 +8,17 @@ from typing import Optional, Sequence
 import numpy as np
 
 from dorban.geometry.boundary_conditions import Boundary, Reflector
-from dorban.geometry.cartesian import Cartesian
+from dorban.geometry.cartesian import RectilinearGrid
 
 
-class Cylindrical(Cartesian):
+class Cylindrical(RectilinearGrid):
     r"""
     Class that represents a cylinder that is symmetric around its axis, in R-Z (two dimensions) or R (one dimension,
     an infinitely long cylinder per unit of height).
 
     The cells are rings: the first axis is the radius r, starting at the axis r = 0, and the second is the height z.
-    The cells are numbered and refined as in :class:`~dorban.geometry.cartesian.Cartesian`, with x replaced by r and y
-    by z, and parts of the rectangle can be filled with black absorber in the same way.
+    The cells are numbered and refined as in every :class:`~dorban.geometry.cartesian.RectilinearGrid`, with x
+    replaced by r and y by z, and parts of the rectangle can be filled with black absorber in the same way.
     Only the volumes and the areas of the faces differ: a cell between the radii :math:`r_0<r_1` of height
     :math:`h` has the volume :math:`\pi(r_1^2-r_0^2)h`, its radial faces the areas :math:`2\pi r_0h` and
     :math:`2\pi r_1h` and its axial faces the area :math:`\pi(r_1^2-r_0^2)`.
@@ -34,7 +34,7 @@ class Cylindrical(Cartesian):
      The face at r = 0 has no area, so the boundary condition there must be a Reflector.
     black_absorber: Optional[Sequence[int]]
      the numbers of the cells of the rectangle that are filled with black absorber,
-     see :class:`~dorban.geometry.cartesian.Cartesian`.
+     see :class:`~dorban.geometry.cartesian.RectilinearGrid`.
     """
 
     def __init__(
@@ -86,6 +86,3 @@ class Cylindrical(Cartesian):
             inner, outer = self._radii(cell)
             return np.pi * (outer**2 - inner**2)
         return 2 * np.pi * self._radii(cell)[face] * self._height(cell)
-
-    def to_polybox(self):
-        raise NotImplementedError("A Cylindrical geometry has no PolyBox equivalent")

@@ -9,10 +9,9 @@ import scipy.special as sp
 
 from dorban.finite_differences.finite_difference_current_calculator import CurrentCalculatorFD
 from dorban.geometry.boundary_conditions import Reflector, Void, ZeroFlux
+from dorban.geometry.cartesian import Cartesian, RectilinearGrid
 from dorban.geometry.cylindrical import Cylindrical
 from dorban.materials import Fissionable
-from dorban.nem.cmfd_current_calculator import CMFDCurrentCalculator
-from dorban.nem.solve_nem import NEMSettings
 from dorban.settings import FDSettings
 from dorban.solve_equation import solve_k
 from dorban.system import Core
@@ -90,9 +89,12 @@ def test_refinement_by_split_matches_the_fine_geometry():
     )
 
 
-def test_nem_is_not_implemented():
+def test_a_cylinder_is_a_rectilinear_grid_but_not_a_cartesian_geometry():
     geometry = _geometry(2)
-    composition = [FUEL] * geometry.cells
-    core = Core(composition, 1, geometry, CMFDCurrentCalculator.from_isotopes(composition, 2))
-    with pytest.raises(NotImplementedError):
-        solve_k(core, NEMSettings())
+    assert isinstance(geometry, RectilinearGrid)
+    assert not isinstance(geometry, Cartesian)
+
+
+def test_a_rectilinear_grid_needs_a_metric():
+    with pytest.raises(TypeError, match="_volume"):
+        RectilinearGrid([np.ones(2)], [Reflector(), Reflector()])
