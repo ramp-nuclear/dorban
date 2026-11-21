@@ -40,8 +40,17 @@ def _fill_node(mat, rows, cols, E, ll, D, absorber, fission):
 
 @numba.njit(cache=True)
 def _neighbor_leakage(leak, cell, neighbor, transverse, g):
-    """The transverse leakage of the neighbor, or minus the cell's own across a boundary."""
-    return leak[neighbor, transverse, g] if neighbor >= 0 else -leak[cell, transverse, g]
+    """
+    The transverse leakage of the neighbor. Across a boundary, the fake neighbor of the quadratic transverse leakage
+    fit: across a reflective boundary (-2) the mirror image of the cell, with the cell's own leakage (exact by
+    symmetry); across the other boundaries (void, extrapolation length, zero flux) minus the cell's own leakage, so
+    that the fitted leakage vanishes near the face (where the flux, and with it the leakage, is small or zero).
+    """
+    if neighbor >= 0:
+        return leak[neighbor, transverse, g]
+    if neighbor == -2:
+        return leak[cell, transverse, g]
+    return -leak[cell, transverse, g]
 
 
 @numba.njit(cache=True)
