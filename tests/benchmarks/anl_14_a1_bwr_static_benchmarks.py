@@ -94,7 +94,13 @@ def _solve(rod_withdrawn, method="finite differences", nodes_per_assembly=2):
     if method == "NEM":
         core = Core(composition, 2, geometry, CMFDCurrentCalculator.from_isotopes(composition, 2))
         split = geometry.uniform_split(nodes_per_assembly) if nodes_per_assembly > 1 else None
-        k, flux = solve_k(core, NEMSettings(split=split))
+        if nodes_per_assembly == 1:
+            # with one node per assembly the converged NEM flux is slightly negative in a few reflector corner cells,
+            # and NEM warns once and continues
+            with pytest.warns(UserWarning, match="Negative flux"):
+                k, flux = solve_k(core, NEMSettings(split=split))
+        else:
+            k, flux = solve_k(core, NEMSettings(split=split))
     else:
         core = Core(composition, 2, geometry, CurrentCalculatorFD.from_isotopes(composition))
         k, flux = solve_k(core, FDSettings(split=geometry.uniform_split(SUBCELLS)))

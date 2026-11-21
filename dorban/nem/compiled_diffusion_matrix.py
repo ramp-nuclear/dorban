@@ -19,7 +19,7 @@ def diffusion_matrix(
     surface_areas: np.array,
     E: int,
     current_calc: CMFDCurrentCalculator,
-    albedos: np.array = None,
+    albedos: np.ndarray,
 ) -> spar.coo_matrix:
     r"""
     This function will generate a sparse matrix representing the diffusion
@@ -39,8 +39,7 @@ def diffusion_matrix(
     current_calc: CMFDCurrentCalculator
      The current calculator.
     albedos: np.array
-     The albedo of each face, see :func:`dorban.nem.cmfd_iterator.boundary_albedos`. If None, 0.5 (Void) is used on
-     faces with the number -1 and infinity (ZeroFlux) on faces with the number -3.
+     The albedo of each face, see :func:`dorban.nem.cmfd_iterator.boundary_albedos`.
 
     Returns
     -------
@@ -50,8 +49,6 @@ def diffusion_matrix(
     """
 
     C = neighbors.shape[0]
-    if albedos is None:
-        albedos = np.where(neighbors == -1, 0.5, np.where(neighbors == -3, np.inf, 0.0))
     row_indices, col_indices, values = _diffusion_matrix(
         neighbors, distances, surface_areas, E, current_calc.dc, current_calc.df, current_calc.coupling, C, albedos
     )

@@ -12,7 +12,7 @@ import numpy as np
 
 from dorban.eigenvalue_solvers.slepc_methods import generalized_eigenvalue_slepc, solve_linear_petsc
 from dorban.finite_differences import cmfd_absorption, cmfd_fission
-from dorban.geometry.boundary_conditions import Boundary, ExtrapolationLength, Reflector, Void, ZeroFlux
+from dorban.geometry.boundary_conditions import AlbedoBoundary, Boundary
 from dorban.materials import CrossSectionData
 from dorban.nem.cmfd_current_calculator import CMFDCurrentCalculator
 from dorban.nem.compiled_diffusion_matrix import diffusion_matrix
@@ -35,13 +35,23 @@ from dorban.utils import op_face
 logger = logging.getLogger(__name__)
 
 
+def _albedo(boundary: Boundary) -> float:
+    """The albedo of a boundary condition, which NEM needs: it supports exactly the AlbedoBoundary conditions."""
+    if not isinstance(boundary, AlbedoBoundary):
+        raise NotImplementedError(
+            f"The boundary condition of type {type(boundary).__name__} isn't implemented in the NEM kernel: "
+            "it supports the boundary conditions of the form J = albedo * flux, the subclasses of AlbedoBoundary."
+        )
+    return boundary.albedo
+
+
 def boundary_conditions_numbering(boundary: Boundary) -> int:
     r"""
-    Function that assigns a negative number to any supported boundary condition type.
-    Boundary conditions of the form :math:`J=\alpha\phi` at the boundary, Void and ExtrapolationLength, are assigned
-    the number -1; the value of :math:`\alpha` of each face is given by :func:`boundary_albedos`.
-    Reflector boundary condition is assigned the number -2.
-    ZeroFlux boundary condition is assigned the number -3.
+    Function that assigns a negative number to a boundary condition, from its albedo :math:`\alpha` in
+    :math:`J=\alpha\phi` at the boundary (see :class:`~dorban.geometry.boundary_conditions.AlbedoBoundary`):
+    -2 for :math:`\alpha=0` (reflective), -3 for :math:`\alpha=\infty` (zero flux) and -1 otherwise, where the value
+    of :math:`\alpha` of each face is given by :func:`boundary_albedos`.
+    Boundary conditions that are not AlbedoBoundary raise NotImplementedError.
 
     Parameters
     ----------
@@ -52,19 +62,18 @@ def boundary_conditions_numbering(boundary: Boundary) -> int:
     -------
     int
     """
-    if isinstance(boundary, (Void, ExtrapolationLength)):
-        return -1
-    if isinstance(boundary, Reflector):
+    albedo = _albedo(boundary)
+    if albedo == 0:
         return -2
-    if isinstance(boundary, ZeroFlux):
+    if np.isinf(albedo):
         return -3
-    raise NotImplementedError(f"The boundary condition of type {boundary} isn't implemented in the NEM kernel.")
+    return -1
 
 
 def boundary_albedos(neighbors: Iterable[Iterable[int | Boundary]]) -> np.array:
     r"""
-    The albedo :math:`\alpha` of each face, in :math:`J=\alpha\phi` at the boundary: 0.5 for Void, the constant of
-    ExtrapolationLength, infinity for ZeroFlux and 0 for faces between cells and reflective faces.
+    The albedo :math:`\alpha` of each face, in :math:`J=\alpha\phi` at the boundary: the albedo of the boundary
+    condition on boundary faces, and 0 on faces between cells.
 
     Parameters
     ----------
@@ -76,17 +85,10 @@ def boundary_albedos(neighbors: Iterable[Iterable[int | Boundary]]) -> np.array:
     np.array
      Array of shape cells x faces.
     """
-
-    def albedo(neighbor) -> float:
-        if isinstance(neighbor, Void):
-            return 0.5
-        if isinstance(neighbor, ExtrapolationLength):
-            return neighbor.constant
-        if isinstance(neighbor, ZeroFlux):
-            return np.inf
-        return 0.0
-
-    return np.array([[albedo(neighbor) for neighbor in cell_neighbors] for cell_neighbors in neighbors], dtype=float)
+    return np.array(
+        [[_albedo(n) if isinstance(n, Boundary) else 0.0 for n in cell_neighbors] for cell_neighbors in neighbors],
+        dtype=float,
+    )
 
 
 def change_neighbors(neighbors: Iterable[Iterable[int | Boundary]]) -> np.array:

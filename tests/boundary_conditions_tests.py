@@ -7,7 +7,7 @@ import pytest
 import scipy.optimize as op
 
 from dorban.finite_differences.finite_difference_current_calculator import CurrentCalculatorFD
-from dorban.geometry.boundary_conditions import ExtrapolationLength, Reflector, Void, ZeroFlux
+from dorban.geometry.boundary_conditions import AlbedoBoundary, Boundary, ExtrapolationLength, Reflector, Void, ZeroFlux
 from dorban.geometry.cartesian import Cartesian
 from dorban.materials import Fissionable
 from dorban.nem.cmfd_current_calculator import CMFDCurrentCalculator
@@ -72,3 +72,41 @@ def test_nem_vacuum_boundary(boundary, albedo):
     core = Core(composition, 1, geometry, CMFDCurrentCalculator.from_isotopes(composition, 2))
     k, _ = solve_k(core, NEMSettings(split=None))
     assert k == pytest.approx(exact_k(albedo), abs=0.5e-5)
+
+
+class PartialReflector(AlbedoBoundary):
+    """A boundary condition that dorban does not define, given only by its albedo."""
+
+    albedo = 0.2
+
+
+def test_finite_differences_use_the_albedo_of_a_new_boundary_condition():
+    reference = exact_k(PartialReflector.albedo)
+    coarse, fine = finite_difference_k(PartialReflector, 20), finite_difference_k(PartialReflector, 40)
+    assert (4 * fine - coarse) / 3 == pytest.approx(reference, abs=1e-5)
+
+
+def test_nem_uses_the_albedo_of_a_new_boundary_condition():
+    test_nem_vacuum_boundary(PartialReflector, PartialReflector.albedo)
+
+
+def test_an_albedo_boundary_needs_an_albedo():
+    class NoAlbedo(AlbedoBoundary):
+        pass
+
+    with pytest.raises(TypeError, match="albedo"):
+        NoAlbedo()
+
+
+def test_nem_rejects_a_boundary_condition_without_an_albedo():
+    class NotAnAlbedo(Boundary):
+        def compute_boundary_coefficient(self, geometry, E, current_calc, cell, face):
+            return np.zeros(0), np.zeros(0), np.zeros(0)
+
+    geometry = Cartesian(
+        [np.full(2, HALF_WIDTH / 2), np.array([5.0])], [Reflector(), NotAnAlbedo(), Reflector(), Reflector()]
+    )
+    composition = [FUEL] * geometry.cells
+    core = Core(composition, 1, geometry, CMFDCurrentCalculator.from_isotopes(composition, 2))
+    with pytest.raises(NotImplementedError, match="NotAnAlbedo"):
+        solve_k(core, NEMSettings(split=None))
