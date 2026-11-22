@@ -3,12 +3,52 @@ The NEM two-node and one-node problems that give the coupling coefficients of th
 preallocated arrays: the coupling update of a cell allocates one matrix and one right hand side, which are reused for
 all its faces, so the cells can be computed in parallel without contention on memory allocation.
 
-In each node the flux along the axis between the nodes is :math:`\bar\phi+\sum_{i=1}^4a_iP_i(\xi)` with the NEM
-polynomials on :math:`\xi\in[-1/2,1/2]`. The unknowns of the two-node problem are, in blocks of E groups,
-:math:`a_1^{(1)},a_2^{(1)},a_1^{(2)},a_2^{(2)},a_3^{(1)},a_4^{(1)},a_3^{(2)},a_4^{(2)}`; its equations are the
-balance, first and second moments of each node (blocks 0, 1, 4 for the first, 2, 3, 5 for the second), the
-continuity of the current (block 6) and the continuity of the heterogeneous flux (block 7). The one-node problem has
-the unknowns :math:`a_1,a_2,a_3,a_4`, the three equations of the node and the boundary condition.
+**The expansion** (the nodal expansion method, NEM [1, 2]). In a node of width :math:`h` along the axis, with
+:math:`\xi=x/h\in[-1/2,1/2]`, the flux of each group is
+
+.. math:: \phi(\xi)=\bar\phi+\sum_{i=1}^4a_iP_i(\xi),\quad P_1=\xi,\ P_2=3\xi^2-\tfrac14,\
+   P_3=\xi\left(\xi^2-\tfrac14\right),\ P_4=\left(\xi^2-\tfrac1{20}\right)\left(\xi^2-\tfrac14\right)
+
+so at the faces :math:`\xi=\pm1/2`
+
+.. math:: \phi=\bar\phi\pm\tfrac12a_1+\tfrac12a_2,\qquad
+   J=-\frac{D}{h}\frac{d\phi}{d\xi}=-\frac{D}{h}\left(a_1\pm3a_2+\tfrac12a_3\pm\tfrac15a_4\right)
+
+**The equations of a node** are the weighted residuals of
+:math:`-\frac{D}{h^2}\phi''+\Sigma\phi=S-L(\xi)`, with :math:`\Sigma` the removal minus the production and
+:math:`L=\bar L+p_1P_1+p_2P_2` the transverse leakage, a quadratic fitted to the average leakages of the node and its
+two neighbors (:func:`dorban.nem.leakage.leakage_coefficients`). With
+:math:`\int P_1^2=\tfrac1{12}`, :math:`\int P_1P_3=-\tfrac1{120}`, :math:`\int P_2^2=\tfrac1{20}`,
+:math:`\int P_2P_4=-\tfrac1{700}`, and the averages :math:`\overline{P_2''}=6`, :math:`\overline{P_4''}=\tfrac25`,
+:math:`\int P_1P_3''=\tfrac12`, :math:`\int P_2P_4''=\tfrac15` (all over :math:`[-1/2,1/2]`), and :math:`d=D/h^2`:
+
+- balance (weight 1): :math:`-6d\,a_2-\tfrac25d\,a_4=S-\Sigma\bar\phi-\bar L`
+- second moment (weight :math:`P_2`, times :math:`-700`): :math:`140d\,a_4-35\Sigma a_2+\Sigma a_4=35p_2`
+- first moment (weight :math:`P_1`, times :math:`-120`): :math:`60d\,a_3-10\Sigma a_1+\Sigma a_3=10p_1`
+
+These are the rows filled by :func:`_fill_node` and :func:`_add_node_rhs`; :math:`\Sigma` couples the groups.
+
+**The two-node problem** of a cell (node 1) and its neighbor on the positive side (node 2) has, in blocks of E groups,
+the unknowns :math:`a_2^{(1)},a_4^{(1)},a_2^{(2)},a_4^{(2)},a_1^{(1)},a_3^{(1)},a_1^{(2)},a_3^{(2)}`, and the equations:
+the balance, second and first moments of each node (blocks 0, 1, 4 for node 1 and 2, 3, 5 for node 2), the
+continuity of the current at the interface, :math:`J^{(1)}(\tfrac12)=J^{(2)}(-\tfrac12)` (block 6), and the continuity
+of the heterogeneous flux, :math:`F_1\phi^{(1)}(\tfrac12)=F_2\phi^{(2)}(-\tfrac12)` with the discontinuity factors
+:math:`F` (block 7). **The one-node problem** of a cell and a boundary has the unknowns :math:`a_2,a_4,a_1,a_3`, the
+three equations of the node and the boundary condition, :math:`J=\alpha\phi` or :math:`\phi=0` at :math:`\xi=1/2`.
+
+**The coupling coefficient** :math:`\hat D` of the CMFD equations is chosen so that their current, the finite
+differences current plus :math:`\hat D(\phi_1+\phi_2)`, equals the current of the NEM solution: the nonlinear
+iteration of Smith [3], in which the CMFD equations carry the global problem and the two-node problems are solved
+only to update the coupling coefficients.
+
+References:
+
+1. H. Finnemann, F. Bennewitz and M. R. Wagner, "Interface current techniques for multidimensional reactor
+   calculations", Atomkernenergie 30 (1977).
+2. R. D. Lawrence, "Progress in nodal methods for the solution of the neutron diffusion and transport equations",
+   Progress in Nuclear Energy 17, 271 (1986).
+3. K. S. Smith, "Nodal method storage reduction by nonlinear iteration", Transactions of the American Nuclear
+   Society 44, 265 (1983).
 """
 
 import numba
@@ -20,8 +60,8 @@ from dorban.nem.leakage import leakage_coefficients
 @numba.njit(cache=True)
 def _fill_node(mat, rows, cols, E, ll, D, absorber, fission):
     """
-    The balance and moment equations of a node of width ll: rows are the blocks of its three equations and cols the
-    blocks of its unknowns :math:`a_1,a_2,a_3,a_4`.
+    The balance, second and first moment equations of a node of width ll (see the module docstring): rows are the
+    blocks of these three equations and cols the blocks of its unknowns :math:`a_2,a_4,a_1,a_3`, in this order.
     """
     for g in range(E):
         d = D[g] / ll / ll
