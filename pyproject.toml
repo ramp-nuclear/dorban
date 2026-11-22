@@ -50,4 +50,7 @@ test = [
 include = ['dorban*']
 exclude = ['tests*']
 
+[tool.setuptools.package-data]
+"dorban.examples" = ["data/oecd_pwr_mox_uo2/*"]
+
 [tool.setuptools_scm]
