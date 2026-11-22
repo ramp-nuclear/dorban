@@ -4,7 +4,13 @@ import scipy.linalg as la
 from dorban import Cartesian, Core, CurrentCalculatorFD, Fissionable, Isotope, Reflector
 from dorban.cross_sections_operators import _absorb as absorb
 from dorban.cross_sections_operators import _nufission as nufission
+from dorban.geometry.boundary_conditions import Boundary, Void
+from dorban.nem.cmfd_current_calculator import CMFDCurrentCalculator
+from dorban.nem.solve_nem import NEMSettings
 from dorban.rdfs.nem_rdf import compute_boundary_fluxes_using_nem, compute_rdfs
+from dorban.settings import FDSettings
+from dorban.solve_equation import solve_k
+from dorban.system import mesh_refinement
 
 
 def one_dim_colorset_flux_boundary(
@@ -108,13 +114,6 @@ def test_rdfs_reproduce_a_fine_reference():
     """Generalized equivalence: a heterogeneous 3x3-node problem solved with finite differences on a fine mesh,
     homogenized per node (flux-volume weighting, node-face currents of the fine solution), is reproduced by NEM on
     the 3x3 nodes with the discontinuity factors of compute_rdfs (k and node fluxes)."""
-    from dorban import Cartesian, Core, CurrentCalculatorFD, Fissionable, Isotope, Reflector
-    from dorban.geometry.boundary_conditions import Boundary
-    from dorban.nem.cmfd_current_calculator import CMFDCurrentCalculator
-    from dorban.nem.solve_nem import NEMSettings
-    from dorban.settings import FDSettings
-    from dorban.solve_equation import solve_k
-    from dorban.system import mesh_refinement
 
     E = 2
     fuel = Fissionable("fuel", scatter=np.array([[0.0, 0.0], [0.02, 0.0]]), absorb=np.array([0.010, 0.08]),
@@ -178,11 +177,6 @@ def test_nem_quarter_core_with_reflective_cuts_equals_the_full_core():
     """A problem symmetric in x and y solved in full and as its quarter with reflective boundaries on the symmetry
     lines: the same k and node fluxes. Across a reflector the quadratic transverse leakage fit takes the mirror image of
     the cell as its neighbor (minus the cell's own leakage gave +560 pcm here)."""
-    from dorban import Cartesian, Core, Fissionable, Isotope, Reflector
-    from dorban.geometry.boundary_conditions import Void
-    from dorban.nem.cmfd_current_calculator import CMFDCurrentCalculator
-    from dorban.nem.solve_nem import NEMSettings
-    from dorban.solve_equation import solve_k
 
     f1 = Fissionable("f1", scatter=np.array([[0, 0], [0.02, 0]]), absorb=np.array([0.010, 0.08]),
                      nusigmaf=np.array([0.007, 0.135]), chi=np.array([1.0, 0.0]), diffusion=np.array([1.4, 0.4]))
