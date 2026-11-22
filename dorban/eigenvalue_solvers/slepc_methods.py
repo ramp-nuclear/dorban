@@ -55,12 +55,13 @@ def spatial_neighbors(M: sparse.spmatrix, groups: int | None) -> int:
     """
     The largest number of neighbors of a cell in the matrix M, ordered by cell and then by energy group: the number
     of off diagonal entries of a row in the same energy group. It is at most 2 in one dimension, 4 in two (3 for
-    triangles) and 6 in three (5 for triangular prisms).
+    triangles) and 6 in three (5 for triangular prisms). Every energy group has the same spatial coupling (neutrons
+    change group where they are), so the first group is counted.
     """
     groups = groups or 1
     M = M.tocoo()
-    same_group = (M.row % groups == M.col % groups) & (M.row != M.col) & (M.data != 0)
-    counts = np.bincount(M.row[same_group], minlength=M.shape[0])
+    first_group = (M.row % groups == 0) & (M.col % groups == 0) & (M.row != M.col) & (M.data != 0)
+    counts = np.bincount(M.row[first_group] // groups, minlength=M.shape[0] // groups)
     return int(counts.max()) if counts.size else 0
 
 

@@ -77,7 +77,7 @@ class CurrentCalculatorFD(CurrentCalculator):
         CurrentCalculatorFD
          new current calculator compatible with the refined geometry
         """
-        return self.__class__(geo.array_refine(self.dc, split, axis=0))
+        return type(self)(geo.array_refine(self.dc, split, axis=0))
 
     @classmethod
     def from_isotopes(cls, isotopes: IsotopeData, transport: bool = False) -> "CurrentCalculatorFD":
@@ -176,7 +176,7 @@ class DiscontinuityCurrentCalculator(CurrentCalculator):
         # the faces between the original cells keep their discontinuity factors
         assemblies, across = faces_between_original_cells(geometry, split, refgeo)
         df = np.where(across[:, :, None], np.asarray(self.df)[assemblies], 1.0)
-        return self.__class__(geometry.array_refine(self.dc, split, axis=0), df)
+        return type(self)(geometry.array_refine(self.dc, split, axis=0), df)
 
     @classmethod
     def from_isotopes(
@@ -263,9 +263,6 @@ class DirectionalCurrentCalculator(CurrentCalculatorFD):
      For each cell i and energy group e, diffusion[i][e] is the directional
      diffusion coefficient at this cell and energy group.
     """
-
-    def __int__(self, dc: np.array):
-        super().__init__(dc)
 
     def dcs_on_faces(self, cells: np.array, faces: np.array, geometry: FiniteGeometry) -> np.array:
         """The directional diffusion coefficients of the given cells across the given faces, see :meth:`dc_on_face`."""
