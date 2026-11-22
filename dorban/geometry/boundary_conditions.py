@@ -3,7 +3,7 @@ This module contains classes representing different boundary conditions
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Protocol, Sequence, Tuple, runtime_checkable
+from typing import Protocol, Sequence, Tuple
 
 import numpy as np
 
@@ -49,12 +49,11 @@ class Boundary(metaclass=ABCMeta):
         raise NotImplementedError
 
 
-@runtime_checkable
 class AlbedoBoundary(Protocol):
     r"""
     Protocol of the boundary conditions of the form :math:`J=\alpha\phi_s`: the outgoing current through the face
-    is proportional to the flux :math:`\phi_s` at the face. Any boundary condition with an ``albedo`` attribute, the
-    value of :math:`\alpha`, is one: it does not have to subclass this class.
+    is proportional to the flux :math:`\phi_s` at the face. Any boundary condition with a read-only ``albedo``, the
+    value of :math:`\alpha`, is one: it does not have to subclass this class, and an attribute is enough.
 
     The albedo is part of the problem, not of the numerical method: 0 for a reflective boundary, 1/2 for vacuum in the
     P1 approximation, infinity for zero flux. Every numerical method uses the same value, so a new boundary condition
@@ -63,7 +62,11 @@ class AlbedoBoundary(Protocol):
     albedo.
     """
 
-    albedo: float
+    @property
+    def albedo(self) -> float:
+        r"""The albedo :math:`\alpha` in :math:`J=\alpha\phi_s`, from 0 (reflective) to infinity (zero flux)."""
+        # a subclass that defines no albedo has none, rather than this protocol's empty body
+        raise AttributeError(f"{type(self).__name__} defines no albedo")
 
     def compute_boundary_coefficient(
         self, geometry, E, current_calc, cell: int, face: int

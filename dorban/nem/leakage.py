@@ -128,15 +128,16 @@ def leakage(
     for cell, adj in enumerate(neighbors):
         for axis in range(dim):
             left, right = adj[2 * axis : 2 * axis + 2]
+            left_albedo, right_albedo = albedos[cell, 2 * axis], albedos[cell, 2 * axis + 1]
             if right >= 0:
                 right_current = current_between_two_cells(
                     cell, right, axis, distances, surfaces_areas, dc, df, coupling, E, flux
                 )
-            elif albedos[cell, 2 * axis + 1] > 0:
+            elif right_albedo > 0:
                 right_current = current_cell_and_boundary(
                     surfaces_areas[cell, 2 * axis + 1],
                     coupling[cell, 2 * axis + 1],
-                    _boundary_coefficient(albedos[cell, 2 * axis + 1], dc[cell], distances[cell, 2 * axis + 1]),
+                    _boundary_coefficient(right_albedo, dc[cell], distances[cell, 2 * axis + 1]),
                     flux[cell * E : cell * E + E],
                 )
             else:
@@ -145,11 +146,11 @@ def leakage(
                 left_current = -current_between_two_cells(
                     left, cell, axis, distances, surfaces_areas, dc, df, coupling, E, flux
                 )
-            elif albedos[cell, 2 * axis] > 0:
+            elif left_albedo > 0:
                 left_current = current_cell_and_boundary(
                     surfaces_areas[cell, 2 * axis],
                     coupling[cell, 2 * axis],
-                    _boundary_coefficient(albedos[cell, 2 * axis], dc[cell], distances[cell, 2 * axis]),
+                    _boundary_coefficient(left_albedo, dc[cell], distances[cell, 2 * axis]),
                     flux[cell * E : cell * E + E],
                 )
             else:

@@ -12,7 +12,7 @@ import numpy as np
 
 from dorban.eigenvalue_solvers.slepc_methods import generalized_eigenvalue_slepc, solve_linear_petsc
 from dorban.finite_differences import cmfd_absorption, cmfd_fission
-from dorban.geometry.boundary_conditions import AlbedoBoundary, Boundary
+from dorban.geometry.boundary_conditions import Boundary
 from dorban.materials import CrossSectionData
 from dorban.nem.cmfd_current_calculator import CMFDCurrentCalculator
 from dorban.nem.compiled_diffusion_matrix import diffusion_matrix
@@ -40,12 +40,13 @@ def _albedo(boundary: Boundary) -> float:
     The albedo of a boundary condition, which NEM needs: it supports exactly the boundary conditions with an albedo,
     see :class:`~dorban.geometry.boundary_conditions.AlbedoBoundary`.
     """
-    if not isinstance(boundary, AlbedoBoundary):
+    try:
+        return boundary.albedo
+    except AttributeError:
         raise NotImplementedError(
             f"The boundary condition of type {type(boundary).__name__} isn't implemented in the NEM kernel: "
-            "it supports the boundary conditions of the form J = albedo * flux, which have an albedo attribute."
-        )
-    return boundary.albedo
+            "it supports the boundary conditions of the form J = albedo * flux, which have an albedo."
+        ) from None
 
 
 def boundary_albedos(neighbors: Iterable[Iterable[int | Boundary]]) -> np.array:
