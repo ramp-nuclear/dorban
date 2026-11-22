@@ -133,8 +133,9 @@ class RectilinearGrid(FiniteGeometry, Protocol):
     def _neighbors_calc(self) -> Sequence[Sequence[int]]:
         """
         function to compute the neighbors of each cell: the number of the neighboring cell, the boundary condition
-        on the sides of the rectangle, or a :class:`Void <dorban.geometry.boundary_conditions.Void>` next to
-        black absorber.
+        of the side beyond the sides of the rectangle, or a :class:`Void <dorban.geometry.boundary_conditions.Void>`
+        toward black absorber. Black absorber absorbs every neutron that enters it, so a face toward it is a vacuum
+        boundary, whatever the boundary conditions of the sides.
 
         Returns
         -------
@@ -142,7 +143,8 @@ class RectilinearGrid(FiniteGeometry, Protocol):
          list of lists, the list at index i are the neighbors of the cell
          numbered i.
         """
-        cube_to_cell = np.full(self.x * self.y * self.z, -1)  # -1 for black absorber
+        black = -1  # a cell of the rectangle filled with black absorber
+        cube_to_cell = np.full(self.x * self.y * self.z, black)
         cube_to_cell[self.nonblack] = np.arange(self.cells)
         shape = (self.x, self.y, self.z)
         strides = (1, self.x, self.x * self.y)
@@ -157,7 +159,7 @@ class RectilinearGrid(FiniteGeometry, Protocol):
         codes = np.stack(columns, axis=1).tolist()
         sides = self.boundary_conditions
         return [
-            [n if n >= 0 else (sides[face] if n == side else Void()) for face, n in enumerate(row)] for row in codes
+            [sides[face] if n == side else Void() if n == black else n for face, n in enumerate(row)] for row in codes
         ]
 
     def _coordinates(self, cell: int) -> Tuple[int, int, int]:
@@ -417,7 +419,8 @@ class Cartesian(RectilinearGrid):
      The length of this sequence is twice the dimension of the system.
     black_absorber: Optional[Sequence[int]]
      list that contains the numbers of cells of the cube
-     that are filled with black absorber.
+     that are filled with black absorber. The faces toward black absorber
+     have a :class:`Void <dorban.geometry.boundary_conditions.Void>` boundary condition.
 
     Attributes
     ----------

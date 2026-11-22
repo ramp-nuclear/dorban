@@ -53,8 +53,11 @@ class CMFDCurrentCalculator:
         self.coupling = coupling if coupling is not None else np.zeros((dc.shape[0], 2 * dim, self.E))
         self.df = df if df is not None else np.ones_like(self.coupling)
 
-    def dc_on_face(self, cell: int, face: int, geometry: FiniteGeometry) -> np.array:
-        """The diffusion coefficients of the cell across the face."""
+    def dc_on_face(self, cell: int, *_, **__) -> np.array:
+        """
+        The diffusion coefficients of the cell, which are the same across every face: see
+        :meth:`dorban.current_calculator.CurrentCalculator.dc_on_face` for the face and geometry it is given.
+        """
         return self.dc[cell]
 
     def mesh_refine(
@@ -88,7 +91,7 @@ class CMFDCurrentCalculator:
         across = across[:, :, None]
         df = np.where(across, self.df[assemblies], 1.0)
         coupling = np.where(across, self.coupling[assemblies], 0.0)
-        return self.__class__(geo.array_refine(self.dc, split, axis=0), self.dim, coupling, df)
+        return type(self)(geo.array_refine(self.dc, split, axis=0), self.dim, coupling, df)
 
     @classmethod
     def from_isotopes(cls, isotopes: IsotopeData, dim: int, transport: bool = False) -> "CMFDCurrentCalculator":

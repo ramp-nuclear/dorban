@@ -34,18 +34,10 @@ class CurrentCalculatorFD(CurrentCalculator):
         self.dc = dc
         self.E = dc.shape[1]
 
-    def dc_on_face(self, cell: int, face: int, geometry: FiniteGeometry) -> np.array:
+    def dc_on_face(self, cell: int, *_, **__) -> np.array:
         """
-        returns the diffusion coefficient across a given face
-
-        Parameters
-        ----------
-        cell: int
-         the index of the cell
-        face: int
-         the index of the face
-        geometry: FiniteGeometry
-         the geometry of the system
+        The diffusion coefficients of the cell, which are the same across every face: see
+        :meth:`dorban.current_calculator.CurrentCalculator.dc_on_face` for the face and geometry it is given.
         """
         return self.dc[cell]
 
@@ -58,8 +50,11 @@ class CurrentCalculatorFD(CurrentCalculator):
         values = areas[:, None] * D1 * D2 / (D2 * distances[:, None] + D1 * other_distances[:, None])
         return values, values
 
-    def dcs_on_faces(self, cells: np.array, faces: np.array, geometry: FiniteGeometry) -> np.array:
-        """The diffusion coefficients of the given cells across the given faces, an array of shape faces x E."""
+    def dcs_on_faces(self, cells: np.array, *_, **__) -> np.array:
+        """
+        The diffusion coefficients of the given cells across the given faces, an array of shape faces x E: the same
+        across every face, see :meth:`dc_on_face`.
+        """
         return self.dc[cells]
 
     def mesh_refine(self, geo: FiniteGeometry, split: Sequence, refgeo) -> "CurrentCalculatorFD":
@@ -139,18 +134,10 @@ class DiscontinuityCurrentCalculator(CurrentCalculator):
         self.df = df
         self.E = dc.shape[1]
 
-    def dc_on_face(self, cell: int, face: int, geometry: FiniteGeometry) -> np.array:
+    def dc_on_face(self, cell: int, *_, **__) -> np.array:
         """
-        returns the diffusion coefficient across a given face
-
-        Parameters
-        ----------
-        cell: int
-         the index of the cell
-        face: int
-         the index of the face
-        geometry: FiniteGeometry
-         the geometry of the system
+        The diffusion coefficients of the cell, which are the same across every face: see
+        :meth:`dorban.current_calculator.CurrentCalculator.dc_on_face` for the face and geometry it is given.
         """
         return self.dc[cell]
 
